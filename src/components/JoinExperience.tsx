@@ -188,7 +188,7 @@ function Notice({
       : closed
         ? { text: "Signups are closed right now.", tone: "muted" as const }
         : full
-          ? { text: "Every team is full — no spots left.", tone: "muted" as const }
+          ? { text: "Every team is full. No spots left.", tone: "muted" as const }
           : spotsLeft <= 5
             ? {
                 text: `Only ${spotsLeft} spot${spotsLeft === 1 ? "" : "s"} left!`,

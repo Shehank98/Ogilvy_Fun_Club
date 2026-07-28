@@ -10,7 +10,7 @@ datasource db {
 model Event {
   id            String   @id @default(cuid())
   title         String   @default("Bowling Champs")
-  introMessage  String   @default("Welcome to Bowling Champs — lanes are booked!")
+  introMessage  String   @default("Welcome to Bowling Champs! The lanes are booked.")
   date          String   @default("")
   time          String   @default("")
   venue         String   @default("")

@@ -121,7 +121,7 @@ export default function AdminPanel({ initialEvent, initialTeams }: Props) {
         return;
       }
       setTeams(payload.teams);
-      announce("ok", "Event reset — the draw starts from team 1.");
+      announce("ok", "Event reset. The draw starts from team 1.");
     } finally {
       setBusy(false);
     }
@@ -222,8 +222,8 @@ export default function AdminPanel({ initialEvent, initialTeams }: Props) {
           </div>
           <p className="mt-3 text-xs text-white/40">
             Capacity: {draft.numTeams * draft.maxPerTeam} people. Reducing the team
-            count is blocked while the teams being removed still have members —
-            remove them or reset the event first.
+            count is blocked while the teams being removed still have members.
+            Remove them or reset the event first.
           </p>
         </Section>
 
