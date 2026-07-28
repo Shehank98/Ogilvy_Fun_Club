@@ -3,7 +3,15 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export default function AdminLogin({ configured }: { configured: boolean }) {
+export default function AdminLogin({
+  configured,
+  heading = "Organiser access",
+  subheading = "Enter the shared PIN to manage the event.",
+}: {
+  configured: boolean;
+  heading?: string;
+  subheading?: string;
+}) {
   const router = useRouter();
   const [pin, setPin] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -36,10 +44,8 @@ export default function AdminLogin({ configured }: { configured: boolean }) {
   return (
     <main className="grid min-h-dvh place-items-center px-6">
       <div className="w-full max-w-sm">
-        <h1 className="mb-2 text-center text-2xl font-bold">Organiser access</h1>
-        <p className="mb-8 text-center text-sm text-white/50">
-          Enter the shared PIN to manage the event.
-        </p>
+        <h1 className="mb-2 text-center text-2xl font-bold">{heading}</h1>
+        <p className="mb-8 text-center text-sm text-white/50">{subheading}</p>
 
         {configured ? (
           <form onSubmit={submit} className="space-y-4">

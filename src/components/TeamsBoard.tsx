@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { rgbaFromHex } from "@/lib/colors";
 import type { PublicEvent, PublicTeam } from "@/lib/event";
@@ -17,6 +18,7 @@ export default function TeamsBoard({
 }) {
   const [event, setEvent] = useState(initialEvent);
   const [teams, setTeams] = useState(initialTeams);
+  const router = useRouter();
 
   useEffect(() => {
     let cancelled = false;
@@ -24,6 +26,13 @@ export default function TeamsBoard({
     async function poll() {
       try {
         const response = await fetch("/api/teams", { cache: "no-store" });
+        if (response.status === 401) {
+          // The organiser session expired while the board was left open —
+          // re-render the page so the PIN gate takes over instead of showing a
+          // roster that has silently stopped updating.
+          router.refresh();
+          return;
+        }
         if (!response.ok) return;
         const payload = (await response.json()) as {
           event: PublicEvent;
@@ -46,7 +55,7 @@ export default function TeamsBoard({
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, []);
+  }, [router]);
 
   return (
     <main className="min-h-dvh px-5 py-10">
@@ -72,10 +81,10 @@ export default function TeamsBoard({
 
         <div className="safe-bottom mt-10 text-center">
           <Link
-            href="/"
+            href="/admin"
             className="inline-block rounded-2xl border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-white/80 transition active:scale-95"
           >
-            Back to signup
+            Back to admin
           </Link>
         </div>
       </div>

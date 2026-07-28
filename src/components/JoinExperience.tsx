@@ -2,7 +2,6 @@
 
 import { motion, useReducedMotion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { useState } from "react";
 import RevealSequence, { type RevealTeam } from "./RevealSequence";
 import SoundToggle from "./SoundToggle";
@@ -159,13 +158,6 @@ export default function JoinExperience({ event, teamColors, spotsLeft, hasTeams 
 
         <Notice closed={closed} full={full} hasTeams={hasTeams} spotsLeft={spotsLeft} error={error} />
       </motion.form>
-
-      <Link
-        href="/teams"
-        className="safe-bottom mt-10 text-sm font-medium text-white/50 underline-offset-4 transition hover:text-white/80 hover:underline"
-      >
-        See all teams
-      </Link>
     </main>
   );
 }

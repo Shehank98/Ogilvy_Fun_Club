@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import type { PublicEvent, PublicTeam } from "@/lib/event";
@@ -144,12 +145,20 @@ export default function AdminPanel({ initialEvent, initialTeams }: Props) {
               {teams.length === 1 ? "team" : "teams"}
             </p>
           </div>
-          <button
-            onClick={logout}
-            className="rounded-xl border border-white/15 px-4 py-2 text-sm font-semibold text-white/70 transition active:scale-95"
-          >
-            Log out
-          </button>
+          <div className="flex shrink-0 gap-2">
+            <Link
+              href="/teams"
+              className="rounded-xl border border-white/15 px-4 py-2 text-sm font-semibold text-white/70 transition active:scale-95"
+            >
+              Teams board
+            </Link>
+            <button
+              onClick={logout}
+              className="rounded-xl border border-white/15 px-4 py-2 text-sm font-semibold text-white/70 transition active:scale-95"
+            >
+              Log out
+            </button>
+          </div>
         </header>
 
         {toast && (

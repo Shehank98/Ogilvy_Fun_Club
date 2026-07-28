@@ -22,8 +22,13 @@ on a live team page. An organiser configures everything behind a shared PIN.
 | `/` | Join page — logo, name field, Join button |
 | *(post-submit)* | Full-screen reveal sequence, then redirect to the result page |
 | `/result/[memberId]` | Persistent team page; polls every 4s for new teammates |
-| `/teams` | Public overview of all teams with animated fill bars |
+| `/teams` | **Organiser-only** overview of all teams with animated fill bars |
 | `/admin` | PIN-protected organiser panel |
+
+Participants see only their own team, on `/result/[memberId]`. The full draw on
+`/teams` sits behind the same shared PIN as `/admin`, and `/api/teams` is gated
+too — gating the page alone would leave the whole draw one fetch away. Reach the
+board from the "Teams board" link in the admin panel.
 
 ## Running locally
 
@@ -130,6 +135,10 @@ somewhere.
 table. A correct PIN sets an httpOnly cookie holding an HMAC derived from the
 PIN, so sessions are verifiable without being stored and the PIN itself is never
 in the cookie. Changing `ADMIN_PIN` invalidates every existing session.
+
+The same gate covers `/teams` and `/api/teams`, so the full draw is organiser-
+only. Note this is one shared secret, not per-person accounts — anyone with the
+PIN is an organiser.
 
 From the panel an organiser can set the team count and size, edit every field
 that feeds the reveal, upload a logo, open or close signups, remove individual

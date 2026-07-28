@@ -1,7 +1,6 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { rgbaFromHex } from "@/lib/colors";
 
@@ -128,14 +127,6 @@ export default function ResultView({ initial }: { initial: ResultData }) {
           )}
         </section>
 
-        <div className="safe-bottom mt-12 text-center">
-          <Link
-            href="/teams"
-            className="inline-block rounded-2xl border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-white/80 backdrop-blur transition active:scale-95"
-          >
-            See all teams
-          </Link>
-        </div>
       </div>
     </main>
   );
