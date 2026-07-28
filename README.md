@@ -97,8 +97,18 @@ hidden seeding, so the distribution is inspectable by anyone on `/teams`.
    - `DATABASE_URL` → `${{Postgres.DATABASE_URL}}`
    - `ADMIN_PIN` → a long shared secret
    - optionally `CLOUDINARY_CLOUD_NAME` + `CLOUDINARY_UPLOAD_PRESET`
-4. Deploy. `railway.json` runs `prisma migrate deploy` before `next start`, so
-   migrations apply on every release.
+4. Deploy. `railway.json` runs `scripts/start.sh`, which applies migrations
+   before serving, so schema changes land on every release.
+
+`DATABASE_URL` is not optional — without it `scripts/start.sh` exits
+immediately with an explanation rather than starting a server that cannot
+work. If a deploy fails its health check, the deploy log will name the cause.
+
+The health check points at `/api/health`, which returns 200 whenever the
+process is serving and reports database reachability in the body instead of the
+status code. This is deliberate: a check that fails on a slow or briefly
+unavailable database gets the container killed and restarted when the container
+itself was fine.
 
 ### Logo storage
 
