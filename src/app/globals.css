@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  @apply bg-slate-950 text-slate-100 antialiased;
+  /* Keep the layout stable when a page grows past the fold. */
+  overflow-x: hidden;
+}
+
+/* iOS zooms the page when a focused input is under 16px. */
+input,
+textarea,
+select {
+  font-size: 16px;
+}
+
+@layer utilities {
+  /* Respect the notch / home indicator on phones held in a pub. */
+  .safe-bottom {
+    padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+  }
+  .safe-top {
+    padding-top: max(1.5rem, env(safe-area-inset-top));
+  }
+}
+
+/*
+ * Anyone who has asked their OS for less motion gets the content instantly:
+ * framer-motion is told to skip animations in JS, and this catches the
+ * CSS-only atmosphere (drifting gradient, floating shapes) too.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

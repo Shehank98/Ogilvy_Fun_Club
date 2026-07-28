@@ -1,0 +1,53 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Event {
+  id            String   @id @default(cuid())
+  title         String   @default("Pool Game Night")
+  introMessage  String   @default("Welcome to the club pool night!")
+  date          String   @default("")
+  time          String   @default("")
+  venue         String   @default("")
+  notes         String   @default("")
+  logoUrl       String?
+  numTeams      Int      @default(4)
+  maxPerTeam    Int      @default(5)
+  isOpen        Boolean  @default(true)
+  /// Round-robin cursor: index (0-based) of the team to try first on the next join.
+  assignPointer Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  teams Team[]
+}
+
+model Team {
+  id         String @id @default(cuid())
+  eventId    String
+  teamNumber Int
+  name       String?
+  color      String
+
+  event   Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  members Member[]
+
+  @@unique([eventId, teamNumber])
+  @@index([eventId])
+}
+
+model Member {
+  id       String   @id @default(cuid())
+  teamId   String
+  name     String
+  joinedAt DateTime @default(now())
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId])
+}

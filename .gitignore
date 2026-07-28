@@ -1,0 +1,20 @@
+node_modules/
+.next/
+out/
+build/
+
+.env
+.env.local
+.env*.local
+
+# Logos written to disk when Cloudinary isn't configured.
+.uploads/
+
+*.tsbuildinfo
+next-env.d.ts
+
+.DS_Store
+*.log
+npm-debug.log*
+
+coverage/
