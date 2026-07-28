@@ -52,7 +52,7 @@ function MissingMember() {
   return (
     <main className="grid min-h-dvh place-items-center px-6 text-center">
       <div className="max-w-sm space-y-4">
-        <p className="text-5xl">🎱</p>
+        <p className="text-5xl">🎳</p>
         <h1 className="text-2xl font-bold">We couldn&rsquo;t find that spot</h1>
         <p className="text-white/60">
           The event may have been reset, or your name was removed by an organiser.

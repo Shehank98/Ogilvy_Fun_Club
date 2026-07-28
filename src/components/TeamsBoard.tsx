@@ -177,7 +177,7 @@ function TeamCard({ team, maxPerTeam }: { team: PublicTeam; maxPerTeam: number }
 function EmptyState() {
   return (
     <div className="rounded-3xl border border-dashed border-white/15 px-6 py-16 text-center">
-      <p className="text-4xl">🎱</p>
+      <p className="text-4xl">🎳</p>
       <h2 className="mt-4 text-xl font-bold">No teams configured yet</h2>
       <p className="mt-2 text-sm text-white/50">
         An organiser needs to set the number of teams in the admin panel.

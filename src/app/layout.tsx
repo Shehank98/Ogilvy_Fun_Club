@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Ogilvy Fun Club — Pool Night",
-  description: "Sign up and get drawn into a team for the club pool game.",
+  title: "Ogilvy Fun Club — Bowling Champs",
+  description: "Sign up and get drawn into a team for the club bowling night.",
 };
 
 export const viewport: Viewport = {

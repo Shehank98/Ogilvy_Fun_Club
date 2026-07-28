@@ -1,8 +1,12 @@
-# Ogilvy Fun Club — Pool Night Team Draw
+# Ogilvy Fun Club — Bowling Champs Team Draw
 
-A mobile-first web app for a club event. People type their name, get dealt into
-a team in round-robin order, and watch a full-screen animated reveal that ends
-on a live team page. An organiser configures everything behind a shared PIN.
+A mobile-first web app for the club bowling night. People type their name, get
+dealt into a team in round-robin order, and watch a full-screen animated reveal
+that ends on a live team page. An organiser configures everything behind a
+shared PIN.
+
+The event title, intro message and all the other copy are admin-editable, so the
+branding here is only the starting default.
 
 ## Stack
 
@@ -19,7 +23,7 @@ on a live team page. An organiser configures everything behind a shared PIN.
 
 | Route | What it is |
 |---|---|
-| `/` | Join page — logo, name field, Join button |
+| `/` | Join page — logo, name field, Join button. Redirects to the result page if this browser has already entered |
 | *(post-submit)* | Full-screen reveal sequence, then redirect to the result page |
 | `/result/[memberId]` | Persistent team page; polls every 4s for new teammates |
 | `/teams` | **Organiser-only** overview of all teams with animated fill bars |
@@ -75,6 +79,26 @@ tests drive:
 - **`src/lib/__tests__/reveal-steps.test.ts`** — the reveal sequence is built
   from the Event record, so these cover step order and the skipping of blank
   fields (notes, and any other detail the admin leaves empty).
+
+## One entry per person
+
+The signup link is emailed out and there are no accounts, so an entry is pinned
+to the browser that used it. Joining sets an httpOnly cookie holding the member
+id; any later visit to `/` is redirected to that person's result page instead of
+a fresh form, and `/api/join` refuses a second submission with `already_joined`.
+So nobody can enter twice, under their own name or anyone else's.
+
+The cookie is only trusted after checking the member still exists. That is what
+makes removal work: take someone off the list in the admin panel and their next
+visit sees the name form again, no cookie clearing required. "Reset event" does
+the same for everyone at once.
+
+**Worth knowing:** this binds an entry to a *browser*, not to a person. Someone
+determined can enter again from a private window or a second device. That is the
+honest limit of a no-accounts design and it is fine for a club night, where the
+point is stopping accidental or casual double entries. If you need it airtight,
+the next step up is emailing each person a unique single-use link — a real
+feature, not a tweak, so say the word and I'll build it.
 
 ## How the assignment works
 

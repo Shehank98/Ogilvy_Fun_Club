@@ -58,6 +58,12 @@ export default function JoinExperience({ event, teamColors, spotsLeft, hasTeams 
       const payload = await response.json();
 
       if (!response.ok) {
+        // This browser already has an entry — show them the team they got
+        // rather than a rejection they can do nothing about.
+        if (payload?.reason === "already_joined" && payload?.memberId) {
+          router.replace(`/result/${payload.memberId}`);
+          return;
+        }
         setError(payload?.error ?? "Something went wrong. Try again.");
         setStatus("idle");
         // The event may have filled or closed while this page was open.
@@ -116,7 +122,7 @@ export default function JoinExperience({ event, teamColors, spotsLeft, hasTeams 
           />
         ) : (
           <div className="mb-6 grid h-24 w-24 place-items-center rounded-3xl border border-white/10 bg-white/5 text-4xl">
-            🎱
+            🎳
           </div>
         )}
         <h1 className="text-balance text-3xl font-black leading-tight sm:text-4xl">

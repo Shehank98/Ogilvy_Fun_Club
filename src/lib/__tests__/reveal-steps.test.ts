@@ -8,7 +8,7 @@ import {
 } from "../reveal-steps";
 
 const fullEvent = {
-  introMessage: "Welcome to pool night!",
+  introMessage: "Welcome to bowling night!",
   date: "Friday 8 August",
   time: "7:00 PM",
   venue: "The Basement Bar",

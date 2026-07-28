@@ -10,6 +10,7 @@ export function fail(error: string, status: number, extra?: Record<string, unkno
 
 /** Human-readable copy for each non-assigned join outcome. */
 export const JOIN_MESSAGES: Record<string, string> = {
+  already_joined: "You're already in — one entry per person.",
   event_full: "Every team is full — no spots left. Talk to the organiser.",
   closed: "Signups are closed right now.",
   no_teams: "No teams have been set up yet. Check back shortly.",
