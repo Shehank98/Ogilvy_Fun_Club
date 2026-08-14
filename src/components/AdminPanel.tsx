@@ -6,11 +6,13 @@ import { useRef, useState } from "react";
 import type { PublicEvent, PublicTeam } from "@/lib/event";
 import type { PublicInvitee } from "@/lib/invitees";
 import { rgbaFromHex } from "@/lib/colors";
+import { selectTeam } from "@/lib/assignment";
 
 type Props = {
   initialEvent: PublicEvent;
   initialTeams: PublicTeam[];
   initialInvitees: PublicInvitee[];
+  initialAssignPointer: number;
 };
 
 type Toast = { tone: "ok" | "error"; text: string } | null;
@@ -19,9 +21,11 @@ export default function AdminPanel({
   initialEvent,
   initialTeams,
   initialInvitees,
+  initialAssignPointer,
 }: Props) {
   const router = useRouter();
   const [event, setEvent] = useState(initialEvent);
+  const [pointer, setPointer] = useState(initialAssignPointer);
   const [teams, setTeams] = useState(initialTeams);
   const [nameDrafts, setNameDrafts] = useState<Record<string, string>>(() =>
     Object.fromEntries(initialTeams.map((t) => [t.id, t.name ?? ""]))
@@ -96,6 +100,7 @@ export default function AdminPanel({
       setEvent(payload.event);
       setDraft(payload.event);
       applyTeams(payload.teams);
+      if (typeof payload.assignPointer === "number") setPointer(payload.assignPointer);
       announce("ok", "Saved.");
       return true;
     } catch {
@@ -175,6 +180,8 @@ export default function AdminPanel({
       }
       applyTeams(payload.teams);
       if (payload.invitees) setInvitees(payload.invitees);
+      // Reset restarts the rotation from team 1 (pointer 0).
+      setPointer(0);
       announce("ok", "Event reset. The draw starts from team 1.");
     } finally {
       setBusy(false);
@@ -247,6 +254,23 @@ export default function AdminPanel({
   const totalMembers = teams.reduce((sum, t) => sum + t.members.length, 0);
   const joinedCount = invitees.filter((i) => i.memberId).length;
 
+  // Which team the next person to join will land in. Reuses the exact draw
+  // logic (round-robin from the pointer, skipping any team already full), so
+  // this matches what the join endpoint would actually do.
+  const nextSelection = selectTeam(
+    teams.map((t) => ({
+      id: t.id,
+      teamNumber: t.teamNumber,
+      memberCount: t.members.length,
+    })),
+    pointer,
+    event.maxPerTeam
+  );
+  const nextTeam =
+    nextSelection.status === "assigned"
+      ? teams.find((t) => t.id === nextSelection.team.id) ?? null
+      : null;
+
   return (
     <main className="min-h-dvh px-5 py-10">
       <div className="mx-auto w-full max-w-3xl space-y-8">
@@ -313,6 +337,34 @@ export default function AdminPanel({
                 }`}
               />
             </button>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
+            <span className="text-sm text-white/60">
+              {event.isOpen ? "Next person joins" : "Next in rotation"}
+            </span>
+            {nextTeam ? (
+              <span className="inline-flex items-center gap-2">
+                <span className="text-white/40">→</span>
+                <span
+                  className="h-3.5 w-3.5 rounded-full"
+                  style={{ background: nextTeam.color }}
+                  aria-hidden
+                />
+                <span className="font-bold" style={{ color: nextTeam.color }}>
+                  {nextTeam.name?.trim()
+                    ? nextTeam.name.trim()
+                    : `Team ${nextTeam.teamNumber}`}
+                </span>
+              </span>
+            ) : (
+              <span className="font-semibold text-white/60">
+                {teams.length === 0 ? "No teams set up yet" : "All teams are full"}
+              </span>
+            )}
+            {!event.isOpen && nextTeam && (
+              <span className="text-xs text-white/40">· signups closed</span>
+            )}
           </div>
         </Section>
 
@@ -618,13 +670,20 @@ export default function AdminPanel({
                     background: rgbaFromHex(team.color, 0.08),
                   }}
                 >
-                  <div className="mb-3 flex items-baseline justify-between">
+                  <div className="mb-3 flex items-baseline justify-between gap-2">
                     <h3 className="font-bold" style={{ color: team.color }}>
                       {team.name?.trim() ? team.name.trim() : `Team ${team.teamNumber}`}
                     </h3>
-                    <span className="text-xs text-white/45">
-                      {team.members.length}/{event.maxPerTeam}
-                    </span>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {nextTeam?.id === team.id && (
+                        <span className="rounded-full bg-emerald-400/15 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-emerald-200">
+                          Next up
+                        </span>
+                      )}
+                      <span className="text-xs text-white/45">
+                        {team.members.length}/{event.maxPerTeam}
+                      </span>
+                    </div>
                   </div>
                   {team.members.length === 0 ? (
                     <p className="text-sm text-white/35">Empty</p>

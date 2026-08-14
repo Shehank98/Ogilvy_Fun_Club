@@ -22,7 +22,14 @@ export async function GET() {
   const event = await getOrCreateEvent();
   const teams = await loadTeams(event.id);
   const invitees = await loadInvitees(event.id);
-  return ok({ event: toPublicEvent(event), teams, invitees });
+  // assignPointer is admin-only (kept off PublicEvent so the public join page
+  // can't reveal which team is next and spoil the draw).
+  return ok({
+    event: toPublicEvent(event),
+    teams,
+    invitees,
+    assignPointer: event.assignPointer,
+  });
 }
 
 export async function PUT(request: Request) {
@@ -98,7 +105,11 @@ export async function PUT(request: Request) {
   }
 
   const teams = await loadTeams(event.id);
-  return ok({ event: toPublicEvent(updated), teams });
+  return ok({
+    event: toPublicEvent(updated),
+    teams,
+    assignPointer: updated.assignPointer,
+  });
 }
 
 class ShrinkBlocked extends Error {

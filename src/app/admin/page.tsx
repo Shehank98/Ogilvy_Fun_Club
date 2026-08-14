@@ -20,6 +20,7 @@ export default async function AdminPage() {
       initialEvent={toPublicEvent(event)}
       initialTeams={teams}
       initialInvitees={invitees}
+      initialAssignPointer={event.assignPointer}
     />
   );
 }
