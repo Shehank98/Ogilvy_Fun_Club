@@ -109,9 +109,13 @@ foreign key with `ON DELETE SET NULL`, so the claim cannot outlive the member it
 points at.
 
 Joining also drops a cookie so reopening the emailed link lands on that person's
-team rather than the form. That is a convenience only, and the result page
-carries a "Not you? Use a different email" link so a shared phone is not stuck
-on the first person's team.
+team rather than the form. That is a convenience only, not the enforcement.
+
+One consequence: the cookie has no escape hatch in the UI, so a browser that has
+already joined always lands on that entry's team. Everyone is expected to use
+their own device with their own emailed link. If a phone does get shared, the
+second person can use a private window, or an organiser can remove the first
+person's member to release the device.
 
 ## How the assignment works
 

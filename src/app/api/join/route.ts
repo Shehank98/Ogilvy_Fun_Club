@@ -10,20 +10,6 @@ export const dynamic = "force-dynamic";
 
 const store = createPrismaAssignmentStore(prisma);
 
-/**
- * Forget this browser's remembered entry.
- *
- * Needed when a device is shared: without it the first person's cookie would
- * bounce everyone else straight to that person's team, with no way to reach the
- * email form. This only clears the convenience cookie — the guest-list claim is
- * untouched, so it cannot be used to enter twice.
- */
-export async function DELETE() {
-  const cookieStore = await cookies();
-  cookieStore.delete(ENTRY_COOKIE);
-  return ok({ ok: true });
-}
-
 export async function POST(request: Request) {
   const body = await readJson(request);
   const email = asString(body.email);
