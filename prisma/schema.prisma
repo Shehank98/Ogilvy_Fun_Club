@@ -24,7 +24,29 @@ model Event {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  teams Team[]
+  teams    Team[]
+  invitees Invitee[]
+}
+
+/// The guest list. An organiser loads email/name pairs up front; a person joins
+/// by entering their email, which resolves to their name here. `memberId` is the
+/// claim: non-null means this email has already been used, and the unique index
+/// on it means one email can never map to two members.
+model Invitee {
+  id        String   @id @default(cuid())
+  eventId   String
+  /// Stored lowercased and trimmed so lookups are case-insensitive.
+  email     String
+  name      String
+  memberId  String?  @unique
+  createdAt DateTime @default(now())
+
+  event  Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  /// Removing the member releases the claim, so that person can enter again.
+  member Member? @relation(fields: [memberId], references: [id], onDelete: SetNull)
+
+  @@unique([eventId, email])
+  @@index([eventId])
 }
 
 model Team {
@@ -47,7 +69,8 @@ model Member {
   name     String
   joinedAt DateTime @default(now())
 
-  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  team    Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  invitee Invitee?
 
   @@index([teamId])
 }

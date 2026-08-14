@@ -22,13 +22,17 @@ export type RevealStep =
   | { kind: "reveal"; id: "reveal"; durationMs: number }
   | { kind: "roster"; id: "roster"; durationMs: number };
 
+/**
+ * How long each card holds. Paced so a card settles and can be read before the
+ * next begins, rather than the text arriving and leaving in one motion.
+ */
 export const STEP_DURATIONS = {
-  intro: 2000,
-  detail: 1700,
-  shuffle: 1800,
-  reveal: 2600,
+  intro: 2800,
+  detail: 2400,
+  shuffle: 2200,
+  reveal: 3200,
   /** Time held after the last teammate has animated in. */
-  rosterOutro: 1600,
+  rosterOutro: 2200,
 } as const;
 
 /**
@@ -38,14 +42,14 @@ export const STEP_DURATIONS = {
  * fast.
  */
 export const REDUCED_MOTION_DURATIONS = {
-  intro: 1100,
-  detail: 900,
-  shuffle: 700,
-  reveal: 1400,
-  rosterOutro: 1000,
+  intro: 1400,
+  detail: 1100,
+  shuffle: 800,
+  reveal: 1600,
+  rosterOutro: 1200,
 } as const;
 
-export const ROSTER_STAGGER_MS = 500;
+export const ROSTER_STAGGER_MS = 550;
 
 type EventFields = Pick<
   PublicEvent,

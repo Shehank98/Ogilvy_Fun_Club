@@ -79,6 +79,16 @@ export type AssignedMember = {
 };
 
 /**
+ * A row from the guest list. `memberId` is the claim: once set, this email has
+ * been used and cannot be used again until an organiser removes the member.
+ */
+export type InviteeRecord = {
+  id: string;
+  name: string;
+  memberId: string | null;
+};
+
+/**
  * The slice of persistence the assignment needs, scoped to one exclusive
  * section. Implementations must guarantee that two concurrent `runExclusive`
  * calls for the same event never overlap.
@@ -87,7 +97,11 @@ export interface AssignmentTx {
   loadEvent(eventId: string): Promise<EventSnapshot | null>;
   /** Teams for the event, sorted by teamNumber, with live member counts. */
   loadTeams(eventId: string): Promise<TeamSlot[]>;
+  /** Guest-list lookup by normalised email, or null if not invited. */
+  findInvitee(eventId: string, email: string): Promise<InviteeRecord | null>;
   createMember(teamId: string, name: string): Promise<AssignedMember>;
+  /** Mark the guest-list row as used by this member. */
+  claimInvitee(inviteeId: string, memberId: string): Promise<void>;
   setPointer(eventId: string, pointer: number): Promise<void>;
 }
 
@@ -97,34 +111,68 @@ export interface AssignmentStore {
 
 export type JoinResult =
   | { status: "assigned"; member: AssignedMember; team: TeamSlot }
+  | { status: "already_joined"; memberId: string }
+  | { status: "not_invited" }
   | { status: "event_full" }
   | { status: "closed" }
   | { status: "no_teams" }
   | { status: "not_found" }
-  | { status: "invalid_name" };
+  | { status: "invalid_email" };
 
 export const MAX_NAME_LENGTH = 40;
+export const MAX_EMAIL_LENGTH = 254;
 
 export function normaliseName(raw: string): string {
   return raw.replace(/\s+/g, " ").trim().slice(0, MAX_NAME_LENGTH);
 }
 
 /**
- * Assign one person to a team. Safe to call concurrently: the whole
- * read-decide-write is performed inside the store's exclusive section, so two
- * simultaneous joins can never both claim the last slot on a team.
+ * Lowercase and trim so the guest list matches however someone types their
+ * address. Returns "" for anything that isn't a plausible email, which the
+ * caller treats as invalid input.
+ *
+ * Deliberately permissive: the guest list is the real gate, so this only needs
+ * to reject obvious typos, not adjudicate RFC 5322.
+ */
+export function normaliseEmail(raw: string): string {
+  const email = raw.trim().toLowerCase();
+  if (email.length === 0 || email.length > MAX_EMAIL_LENGTH) return "";
+  if (!/^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]{2,}$/.test(email)) return "";
+  return email;
+}
+
+/**
+ * Assign one invited person to a team.
+ *
+ * Identity comes from the guest list: the email resolves to the name an
+ * organiser entered, so nobody types their own name and nobody can enter under
+ * a second one. The claim check and the claim write both happen inside the
+ * store's exclusive section, alongside the team selection, so two simultaneous
+ * submissions of the same email can never both produce a member, and two
+ * different people can never both take the last slot on a team.
  */
 export async function joinEvent(
   store: AssignmentStore,
   eventId: string,
-  rawName: string
+  rawEmail: string
 ): Promise<JoinResult> {
-  const name = normaliseName(rawName);
-  if (!name) return { status: "invalid_name" };
+  const email = normaliseEmail(rawEmail);
+  if (!email) return { status: "invalid_email" };
 
   return store.runExclusive(eventId, async (tx) => {
     const event = await tx.loadEvent(eventId);
     if (!event) return { status: "not_found" } as const;
+
+    const invitee = await tx.findInvitee(eventId, email);
+    // Checked before `isOpen` so an uninvited address gets the accurate
+    // message rather than being told signups are closed.
+    if (!invitee) return { status: "not_invited" } as const;
+
+    // One entry per email, enforced here rather than by a browser cookie.
+    if (invitee.memberId) {
+      return { status: "already_joined", memberId: invitee.memberId } as const;
+    }
+
     if (!event.isOpen) return { status: "closed" } as const;
 
     const teams = await tx.loadTeams(eventId);
@@ -132,7 +180,8 @@ export async function joinEvent(
 
     if (selection.status !== "assigned") return selection;
 
-    const member = await tx.createMember(selection.team.id, name);
+    const member = await tx.createMember(selection.team.id, invitee.name);
+    await tx.claimInvitee(invitee.id, member.id);
     await tx.setPointer(eventId, selection.nextPointer);
 
     return {

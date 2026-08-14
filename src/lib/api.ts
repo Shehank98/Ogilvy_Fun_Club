@@ -11,11 +11,12 @@ export function fail(error: string, status: number, extra?: Record<string, unkno
 /** Human-readable copy for each non-assigned join outcome. */
 export const JOIN_MESSAGES: Record<string, string> = {
   already_joined: "You're already in. One entry per person.",
+  not_invited: "That email isn't on the guest list. Check with the organiser.",
   event_full: "Every team is full. No spots left, so talk to the organiser.",
   closed: "Signups are closed right now.",
   no_teams: "No teams have been set up yet. Check back shortly.",
   not_found: "This event no longer exists.",
-  invalid_name: "Please enter your name.",
+  invalid_email: "Please enter a valid email address.",
 };
 
 export async function readJson(request: Request): Promise<Record<string, unknown>> {

@@ -1,9 +1,9 @@
 # Ogilvy Fun Club — Bowling Champs Team Draw
 
-A mobile-first web app for the club bowling night. People type their name, get
-dealt into a team in round-robin order, and watch a full-screen animated reveal
-that ends on a live team page. An organiser configures everything behind a
-shared PIN.
+A mobile-first web app for the club bowling night. Invited people enter the
+email their invite was sent to, get dealt into a team in round-robin order, and
+watch a full-screen animated reveal that ends on a live team page. An organiser
+loads the guest list and configures everything behind a shared PIN.
 
 The event title, intro message and all the other copy are admin-editable, so the
 branding here is only the starting default.
@@ -23,7 +23,7 @@ branding here is only the starting default.
 
 | Route | What it is |
 |---|---|
-| `/` | Join page — logo, name field, Join button. Redirects to the result page if this browser has already entered |
+| `/` | Join page: logo, email field, Join button. Redirects to the result page if this browser has already entered |
 | *(post-submit)* | Full-screen reveal sequence, then redirect to the result page |
 | `/result/[memberId]` | Persistent team page; polls every 4s for new teammates |
 | `/teams` | **Organiser-only** overview of all teams with animated fill bars |
@@ -44,7 +44,8 @@ npm run dev                   # http://localhost:3000
 ```
 
 The first request creates a default event (4 teams of 5) so nothing errors on a
-fresh database. Open `/admin` and enter your `ADMIN_PIN` to configure it.
+fresh database. Open `/admin`, enter your `ADMIN_PIN`, and paste a guest list.
+Until at least one address is on that list, nobody can join.
 
 ## Tests
 
@@ -57,12 +58,13 @@ decision function and a store-shaped persistence layer that both production and
 tests drive:
 
 - **`src/lib/__tests__/assignment.test.ts`** — round-robin ordering, skipping
-  full teams, wrap-around, the `event full` state, and concurrency against an
-  in-memory store. Includes the required scenario: 20 simultaneous submissions
-  across 4 teams of 5 land exactly 5 per team with no overflow. A companion test
-  runs the same scenario against a deliberately unlocked store and asserts the
-  distribution *does* break, which proves the concurrency assertions aren't
-  passing vacuously.
+  full teams, wrap-around, the `event full` state, guest-list lookup, and
+  concurrency against an in-memory store. Includes the required scenario: 20
+  simultaneous submissions across 4 teams of 5 land exactly 5 per team with no
+  overflow, plus one address submitted 10 times at once yielding exactly one
+  member. Companion tests run both scenarios against a deliberately unlocked
+  store and assert they *do* break, which proves the concurrency assertions
+  aren't passing vacuously.
 - **`src/lib/__tests__/assignment.db.test.ts`** — the same guarantees against
   real Postgres, exercising the `SELECT … FOR UPDATE` row lock. These skip
   automatically unless `TEST_DATABASE_URL` (or `DATABASE_URL`) is set:
@@ -80,25 +82,36 @@ tests drive:
   from the Event record, so these cover step order and the skipping of blank
   fields (notes, and any other detail the admin leaves empty).
 
-## One entry per person
+## Guest list and one entry per person
 
-The signup link is emailed out and there are no accounts, so an entry is pinned
-to the browser that used it. Joining sets an httpOnly cookie holding the member
-id; any later visit to `/` is redirected to that person's result page instead of
-a fresh form, and `/api/join` refuses a second submission with `already_joined`.
-So nobody can enter twice, under their own name or anyone else's.
+There are no accounts. Instead an organiser loads a guest list of
+`email, name` pairs in the admin panel, and a person joins by entering the email
+their invite was sent to. That address resolves to the name on the list, so
+nobody types their own name and nobody can enter under a second one.
 
-The cookie is only trusted after checking the member still exists. That is what
-makes removal work: take someone off the list in the admin panel and their next
-visit sees the name form again, no cookie clearing required. "Reset event" does
-the same for everyone at once.
+Each address can be used exactly once. The `Invitee` row carries a `memberId`
+claim with a unique index on it, and the claim is both checked and written
+inside the same locked transaction as the team selection. Submitting the same
+address twice at once therefore produces one member, not two. Enforcement lives
+in the database, so clearing cookies, switching browser or using another device
+makes no difference.
 
-**Worth knowing:** this binds an entry to a *browser*, not to a person. Someone
-determined can enter again from a private window or a second device. That is the
-honest limit of a no-accounts design and it is fine for a club night, where the
-point is stopping accidental or casual double entries. If you need it airtight,
-the next step up is emailing each person a unique single-use link — a real
-feature, not a tweak, so say the word and I'll build it.
+An organiser has two ways to give someone another go:
+
+| Action | Effect |
+|---|---|
+| Remove the member (Roster) | Frees their slot and releases their email to be used again. They keep their place on the guest list. |
+| Remove them from the guest list | Also deletes their member if they had joined. That address can no longer join at all. |
+| Reset event | Clears every member and releases every claim. The guest list is kept, so the same people can be redrawn. |
+
+Releasing on member deletion is done by the schema: `Invitee.memberId` is a
+foreign key with `ON DELETE SET NULL`, so the claim cannot outlive the member it
+points at.
+
+Joining also drops a cookie so reopening the emailed link lands on that person's
+team rather than the form. That is a convenience only, and the result page
+carries a "Not you? Use a different email" link so a shared phone is not stuck
+on the first person's team.
 
 ## How the assignment works
 

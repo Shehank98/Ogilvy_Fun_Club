@@ -7,7 +7,7 @@ import RevealSequence, { type RevealTeam } from "./RevealSequence";
 import SoundToggle from "./SoundToggle";
 import Backdrop from "./Backdrop";
 import type { PublicEvent } from "@/lib/event";
-import { MAX_NAME_LENGTH } from "@/lib/assignment";
+import { MAX_EMAIL_LENGTH } from "@/lib/assignment";
 import { playPop } from "@/lib/sound";
 
 type Props = {
@@ -22,7 +22,7 @@ export default function JoinExperience({ event, teamColors, spotsLeft, hasTeams 
   const router = useRouter();
   const reducedMotion = useReducedMotion() ?? false;
 
-  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "joining">("idle");
   const [error, setError] = useState<string | null>(null);
   const [reveal, setReveal] = useState<{
@@ -39,9 +39,9 @@ export default function JoinExperience({ event, teamColors, spotsLeft, hasTeams 
     formEvent.preventDefault();
     if (disabled) return;
 
-    const trimmed = name.trim();
+    const trimmed = email.trim();
     if (!trimmed) {
-      setError("Please enter your name.");
+      setError("Please enter your email address.");
       return;
     }
 
@@ -53,7 +53,7 @@ export default function JoinExperience({ event, teamColors, spotsLeft, hasTeams 
       const response = await fetch("/api/join", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: trimmed }),
+        body: JSON.stringify({ email: trimmed }),
       });
       const payload = await response.json();
 
@@ -128,6 +128,9 @@ export default function JoinExperience({ event, teamColors, spotsLeft, hasTeams 
         <h1 className="text-balance text-3xl font-black leading-tight sm:text-4xl">
           {event.title}
         </h1>
+        <p className="mt-3 text-balance text-sm text-white/55">
+          Enter the email address your invite was sent to.
+        </p>
       </motion.div>
 
       <motion.form
@@ -139,12 +142,17 @@ export default function JoinExperience({ event, teamColors, spotsLeft, hasTeams 
       >
         <div className="relative">
           <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Your name"
-            aria-label="Your name"
-            maxLength={MAX_NAME_LENGTH}
-            autoComplete="name"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            type="email"
+            inputMode="email"
+            placeholder="you@company.com"
+            aria-label="Your email address"
+            maxLength={MAX_EMAIL_LENGTH}
+            autoComplete="email"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             enterKeyHint="go"
             disabled={disabled}
             className="w-full rounded-2xl border border-white/15 bg-white/5 px-5 py-4 text-lg text-white placeholder:text-white/35 outline-none backdrop-blur transition duration-300 focus:border-sky-400/60 focus:bg-white/10 focus:shadow-[0_0_0_4px_rgba(56,189,248,0.18),0_0_36px_rgba(56,189,248,0.28)] disabled:opacity-50"

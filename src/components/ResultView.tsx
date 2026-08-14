@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { rgbaFromHex } from "@/lib/colors";
 
@@ -31,6 +32,7 @@ const POLL_INTERVAL_MS = 4000;
 export default function ResultView({ initial }: { initial: ResultData }) {
   const [data, setData] = useState(initial);
   const reducedMotion = useReducedMotion() ?? false;
+  const router = useRouter();
 
   useEffect(() => {
     let cancelled = false;
@@ -127,6 +129,21 @@ export default function ResultView({ initial }: { initial: ResultData }) {
           )}
         </section>
 
+        {/* Someone else picking up a shared phone would otherwise be bounced
+            here forever with no way back to the email form. */}
+        <div className="safe-bottom mt-12 text-center">
+          <button
+            type="button"
+            onClick={async () => {
+              await fetch("/api/join", { method: "DELETE" });
+              router.push("/");
+              router.refresh();
+            }}
+            className="text-sm text-white/40 underline-offset-4 transition hover:text-white/70 hover:underline"
+          >
+            Not {data.memberName}? Use a different email
+          </button>
+        </div>
       </div>
     </main>
   );

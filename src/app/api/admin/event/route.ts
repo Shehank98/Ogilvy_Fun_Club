@@ -7,6 +7,7 @@ import {
   teamsWithMembersAbove,
   toPublicEvent,
 } from "@/lib/event";
+import { loadInvitees } from "@/lib/invitees";
 import { asInt, asString, fail, ok, readJson } from "@/lib/api";
 import { TEAM_COLORS } from "@/lib/colors";
 
@@ -20,7 +21,8 @@ export async function GET() {
 
   const event = await getOrCreateEvent();
   const teams = await loadTeams(event.id);
-  return ok({ event: toPublicEvent(event), teams });
+  const invitees = await loadInvitees(event.id);
+  return ok({ event: toPublicEvent(event), teams, invitees });
 }
 
 export async function PUT(request: Request) {

@@ -93,14 +93,16 @@ export default function RevealSequence({
     ? `radial-gradient(ellipse at center, ${rgbaFromHex(team.color, 0.42)}, #020617 72%)`
     : "radial-gradient(ellipse at center, rgba(30,41,59,0.9), #020617 72%)";
 
+  // A long, soft ease so cards drift in and out rather than snapping. The
+  // step durations above leave room for this to finish and still hold.
   const transition = reducedMotion
     ? { duration: 0 }
-    : { duration: 0.45, ease: [0.22, 1, 0.36, 1] as const };
+    : { duration: 0.85, ease: [0.16, 1, 0.3, 1] as const };
 
   return (
     <div
       className="fixed inset-0 z-50 flex flex-col overflow-hidden"
-      style={{ background, transition: "background 700ms ease" }}
+      style={{ background, transition: "background 1200ms ease" }}
       role="dialog"
       aria-modal="true"
       aria-label="Team reveal"
@@ -117,9 +119,9 @@ export default function RevealSequence({
         <AnimatePresence mode="wait">
           <motion.div
             key={step?.id ?? "done"}
-            initial={reducedMotion ? false : { opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={reducedMotion ? { opacity: 1 } : { opacity: 0, y: -24 }}
+            initial={reducedMotion ? false : { opacity: 0, y: 34, filter: "blur(6px)" }}
+            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            exit={reducedMotion ? { opacity: 1 } : { opacity: 0, y: -28, filter: "blur(6px)" }}
             transition={transition}
             className="w-full max-w-2xl text-center"
           >
@@ -158,7 +160,7 @@ function InfoStep({ step, reducedMotion }: { step: RevealStep & { kind: "info" }
         <motion.p
           initial={reducedMotion ? false : { opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: reducedMotion ? 0 : 0.12 }}
+          transition={{ duration: reducedMotion ? 0 : 0.5, delay: reducedMotion ? 0 : 0.18 }}
           className="text-sm font-medium uppercase tracking-[0.3em] text-white/50"
         >
           {step.label}
@@ -182,7 +184,7 @@ function ShuffleStep({ colors, reducedMotion }: { colors: string[]; reducedMotio
 
   useEffect(() => {
     if (reducedMotion || colors.length === 0) return;
-    const timer = window.setInterval(() => setTick((t) => t + 1), 120);
+    const timer = window.setInterval(() => setTick((t) => t + 1), 170);
     return () => window.clearInterval(timer);
   }, [reducedMotion, colors.length]);
 
@@ -197,7 +199,7 @@ function ShuffleStep({ colors, reducedMotion }: { colors: string[]; reducedMotio
       <div className="flex items-center justify-center">
         <motion.div
           animate={reducedMotion ? {} : { rotate: 360 }}
-          transition={{ duration: 1.1, repeat: Infinity, ease: "linear" }}
+          transition={{ duration: 1.6, repeat: Infinity, ease: "linear" }}
           className="grid h-32 w-32 place-items-center rounded-full border-4 border-white/10 will-change-transform"
           style={{ borderTopColor: activeColor }}
         >
@@ -205,7 +207,7 @@ function ShuffleStep({ colors, reducedMotion }: { colors: string[]; reducedMotio
             key={activeIndex}
             initial={reducedMotion ? false : { scale: 0.7, opacity: 0.4 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.12 }}
+            transition={{ duration: 0.18 }}
             className="text-5xl font-black tabular-nums"
             style={{ color: activeColor }}
           >
@@ -255,7 +257,7 @@ function TeamRevealStep({ team, reducedMotion }: { team: RevealTeam; reducedMoti
         transition={
           reducedMotion
             ? { duration: 0 }
-            : { type: "spring", stiffness: 260, damping: 12, mass: 0.9 }
+            : { type: "spring", stiffness: 150, damping: 14, mass: 1.1 }
         }
         className="text-6xl font-black leading-none drop-shadow-[0_0_40px_rgba(0,0,0,0.45)] sm:text-8xl"
         style={{ color: team.color }}
@@ -298,7 +300,11 @@ function RosterStep({
               hidden: reducedMotion ? { opacity: 1 } : { opacity: 0, y: 18, scale: 0.96 },
               visible: { opacity: 1, y: 0, scale: 1 },
             }}
-            transition={reducedMotion ? { duration: 0 } : { duration: 0.4, ease: "easeOut" }}
+            transition={
+              reducedMotion
+                ? { duration: 0 }
+                : { duration: 0.65, ease: [0.16, 1, 0.3, 1] }
+            }
             className="rounded-2xl border px-5 py-3 text-lg font-semibold text-white backdrop-blur"
             style={{
               borderColor: rgbaFromHex(team.color, 0.5),

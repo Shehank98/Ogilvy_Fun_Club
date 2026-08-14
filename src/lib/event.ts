@@ -80,14 +80,28 @@ export type PublicTeam = {
   teamNumber: number;
   name: string | null;
   color: string;
-  members: { id: string; name: string; joinedAt: string }[];
+  members: { id: string; name: string; email: string | null; joinedAt: string }[];
 };
 
+/**
+ * Teams with their rosters.
+ *
+ * Includes each member's guest-list email, so every caller must be
+ * organiser-only. That holds today: the join page uses this for counts and
+ * colours without passing members to the client, and `/api/teams`,
+ * `/api/admin/*` are all behind the admin gate. What a participant sees comes
+ * from `/api/member/[memberId]`, which returns names only.
+ */
 export async function loadTeams(eventId: string): Promise<PublicTeam[]> {
   const teams = await prisma.team.findMany({
     where: { eventId },
     orderBy: { teamNumber: "asc" },
-    include: { members: { orderBy: { joinedAt: "asc" } } },
+    include: {
+      members: {
+        orderBy: { joinedAt: "asc" },
+        include: { invitee: { select: { email: true } } },
+      },
+    },
   });
 
   return teams.map((team) => ({
@@ -98,6 +112,7 @@ export async function loadTeams(eventId: string): Promise<PublicTeam[]> {
     members: team.members.map((m) => ({
       id: m.id,
       name: m.name,
+      email: m.invitee?.email ?? null,
       joinedAt: m.joinedAt.toISOString(),
     })),
   }));

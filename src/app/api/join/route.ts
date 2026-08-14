@@ -4,31 +4,46 @@ import { createPrismaAssignmentStore } from "@/lib/prisma-store";
 import { prisma } from "@/lib/prisma";
 import { getOrCreateEvent, teamLabel, toPublicEvent } from "@/lib/event";
 import { JOIN_MESSAGES, asString, fail, ok, readJson } from "@/lib/api";
-import { ENTRY_COOKIE, ENTRY_COOKIE_OPTIONS, existingEntry } from "@/lib/entry";
+import { ENTRY_COOKIE, ENTRY_COOKIE_OPTIONS } from "@/lib/entry";
 
 export const dynamic = "force-dynamic";
 
 const store = createPrismaAssignmentStore(prisma);
 
+/**
+ * Forget this browser's remembered entry.
+ *
+ * Needed when a device is shared: without it the first person's cookie would
+ * bounce everyone else straight to that person's team, with no way to reach the
+ * email form. This only clears the convenience cookie — the guest-list claim is
+ * untouched, so it cannot be used to enter twice.
+ */
+export async function DELETE() {
+  const cookieStore = await cookies();
+  cookieStore.delete(ENTRY_COOKIE);
+  return ok({ ok: true });
+}
+
 export async function POST(request: Request) {
   const body = await readJson(request);
-  const name = asString(body.name);
-
-  // One entry per person: if this browser already has a live entry, send them
-  // back to it rather than drawing them a second team.
-  const already = await existingEntry();
-  if (already) {
-    return fail(JOIN_MESSAGES.already_joined, 409, {
-      reason: "already_joined",
-      memberId: already,
-    });
-  }
+  const email = asString(body.email);
 
   const event = await getOrCreateEvent();
-  const result = await joinEvent(store, event.id, name);
+  const result = await joinEvent(store, event.id, email);
 
   if (result.status !== "assigned") {
-    const status = result.status === "invalid_name" ? 400 : 409;
+    // Someone re-submitting the address they already used gets sent to the team
+    // they were drawn, not a dead end.
+    if (result.status === "already_joined") {
+      const cookieStore = await cookies();
+      cookieStore.set(ENTRY_COOKIE, result.memberId, ENTRY_COOKIE_OPTIONS);
+      return fail(JOIN_MESSAGES.already_joined, 409, {
+        reason: "already_joined",
+        memberId: result.memberId,
+      });
+    }
+
+    const status = result.status === "invalid_email" ? 400 : 409;
     return fail(JOIN_MESSAGES[result.status] ?? "Could not join.", status, {
       reason: result.status,
     });
@@ -40,7 +55,9 @@ export async function POST(request: Request) {
     include: { members: { orderBy: { joinedAt: "asc" } } },
   });
 
-  // Claim this browser's single entry.
+  // Remember this entry so reopening the emailed link lands on their team.
+  // The guest list is what actually enforces one entry per person; this is
+  // only a convenience.
   const cookieStore = await cookies();
   cookieStore.set(ENTRY_COOKIE, result.member.id, ENTRY_COOKIE_OPTIONS);
 

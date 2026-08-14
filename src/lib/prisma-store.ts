@@ -30,12 +30,27 @@ function txAdapter(tx: PrismaTx): AssignmentTx {
       }));
     },
 
+    async findInvitee(eventId, email) {
+      const invitee = await tx.invitee.findUnique({
+        where: { eventId_email: { eventId, email } },
+        select: { id: true, name: true, memberId: true },
+      });
+      return invitee ?? null;
+    },
+
     async createMember(teamId, name) {
       const member = await tx.member.create({
         data: { teamId, name },
         select: { id: true, name: true, teamId: true },
       });
       return member;
+    },
+
+    async claimInvitee(inviteeId, memberId) {
+      await tx.invitee.update({
+        where: { id: inviteeId },
+        data: { memberId },
+      });
     },
 
     async setPointer(eventId, pointer) {

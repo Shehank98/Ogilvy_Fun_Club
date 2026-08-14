@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { isAdminRequest } from "@/lib/auth";
 import { getOrCreateEvent, loadTeams } from "@/lib/event";
+import { loadInvitees } from "@/lib/invitees";
 import { fail, ok } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
@@ -19,5 +20,10 @@ export async function DELETE(
   await prisma.member.delete({ where: { id: memberId } });
 
   const event = await getOrCreateEvent();
-  return ok({ teams: await loadTeams(event.id) });
+  // Their guest-list claim is released by the FK, so send the refreshed list
+  // back too: that address is usable again immediately.
+  return ok({
+    teams: await loadTeams(event.id),
+    invitees: await loadInvitees(event.id),
+  });
 }

@@ -11,11 +11,13 @@ import type { AssignmentStore, AssignmentTx, EventSnapshot } from "../assignment
 
 type MemoryTeam = { id: string; teamNumber: number; memberCount: number };
 type MemoryMember = { id: string; name: string; teamId: string };
+type MemoryInvitee = { id: string; email: string; name: string; memberId: string | null };
 
 export type MemoryDb = {
   event: EventSnapshot;
   teams: MemoryTeam[];
   members: MemoryMember[];
+  invitees: MemoryInvitee[];
 };
 
 export function makeDb(options: {
@@ -24,8 +26,19 @@ export function makeDb(options: {
   maxPerTeam: number;
   isOpen?: boolean;
   assignPointer?: number;
+  /** Guest list. Defaults to `player1@club.test` … `playerN@club.test`. */
+  invitees?: { email: string; name: string }[];
+  inviteeCount?: number;
 }): MemoryDb {
   const eventId = options.eventId ?? "event-1";
+
+  const list =
+    options.invitees ??
+    Array.from({ length: options.inviteeCount ?? 50 }, (_, i) => ({
+      email: `player${i + 1}@club.test`,
+      name: `Player ${i + 1}`,
+    }));
+
   return {
     event: {
       id: eventId,
@@ -39,6 +52,12 @@ export function makeDb(options: {
       memberCount: 0,
     })),
     members: [],
+    invitees: list.map((entry, i) => ({
+      id: `invitee-${i + 1}`,
+      email: entry.email.toLowerCase(),
+      name: entry.name,
+      memberId: null,
+    })),
   };
 }
 
@@ -60,6 +79,12 @@ export function createMemoryStore(
       await tick();
       return db.teams.map((t) => ({ ...t }));
     },
+    async findInvitee(eventId, email) {
+      await tick();
+      if (db.event.id !== eventId) return null;
+      const found = db.invitees.find((i) => i.email === email);
+      return found ? { id: found.id, name: found.name, memberId: found.memberId } : null;
+    },
     async createMember(teamId, name) {
       await tick();
       const member = { id: `member-${nextMemberId++}`, name, teamId };
@@ -67,6 +92,11 @@ export function createMemoryStore(
       const team = db.teams.find((t) => t.id === teamId);
       if (team) team.memberCount += 1;
       return member;
+    },
+    async claimInvitee(inviteeId, memberId) {
+      await tick();
+      const invitee = db.invitees.find((i) => i.id === inviteeId);
+      if (invitee) invitee.memberId = memberId;
     },
     async setPointer(_eventId, pointer) {
       await tick();

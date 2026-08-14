@@ -4,16 +4,28 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import type { PublicEvent, PublicTeam } from "@/lib/event";
+import type { PublicInvitee } from "@/lib/invitees";
 import { rgbaFromHex } from "@/lib/colors";
 
-type Props = { initialEvent: PublicEvent; initialTeams: PublicTeam[] };
+type Props = {
+  initialEvent: PublicEvent;
+  initialTeams: PublicTeam[];
+  initialInvitees: PublicInvitee[];
+};
 
 type Toast = { tone: "ok" | "error"; text: string } | null;
 
-export default function AdminPanel({ initialEvent, initialTeams }: Props) {
+export default function AdminPanel({
+  initialEvent,
+  initialTeams,
+  initialInvitees,
+}: Props) {
   const router = useRouter();
   const [event, setEvent] = useState(initialEvent);
   const [teams, setTeams] = useState(initialTeams);
+  const [invitees, setInvitees] = useState(initialInvitees);
+  const [guestPaste, setGuestPaste] = useState("");
+  const [guestErrors, setGuestErrors] = useState<string[]>([]);
   const [draft, setDraft] = useState(initialEvent);
   const [toast, setToast] = useState<Toast>(null);
   const [busy, setBusy] = useState(false);
@@ -96,7 +108,8 @@ export default function AdminPanel({ initialEvent, initialTeams }: Props) {
         return;
       }
       setTeams(payload.teams);
-      announce("ok", `${name} removed.`);
+      if (payload.invitees) setInvitees(payload.invitees);
+      announce("ok", `${name} removed. Their email can be used again.`);
     } finally {
       setBusy(false);
     }
@@ -121,7 +134,66 @@ export default function AdminPanel({ initialEvent, initialTeams }: Props) {
         return;
       }
       setTeams(payload.teams);
+      if (payload.invitees) setInvitees(payload.invitees);
       announce("ok", "Event reset. The draw starts from team 1.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function addGuests() {
+    if (!guestPaste.trim()) return;
+    setBusy(true);
+    setGuestErrors([]);
+    try {
+      const response = await fetch("/api/admin/invitees", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: guestPaste }),
+      });
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setGuestErrors(payload?.errors ?? []);
+        announce("error", payload?.error ?? "Could not add anyone.");
+        return;
+      }
+
+      setInvitees(payload.invitees);
+      setGuestPaste("");
+      setGuestErrors(payload.errors ?? []);
+
+      const parts = [];
+      if (payload.added) parts.push(`${payload.added} added`);
+      if (payload.updated) parts.push(`${payload.updated} updated`);
+      if (payload.skipped) parts.push(`${payload.skipped} skipped`);
+      announce("ok", parts.length ? `Guest list: ${parts.join(", ")}.` : "No changes.");
+    } catch {
+      announce("error", "Couldn't reach the server.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removeGuest(invitee: PublicInvitee) {
+    const warning = invitee.memberId
+      ? `Remove ${invitee.name} from the guest list? They have already been drawn into team ${invitee.teamNumber}, so that spot is freed too.`
+      : `Remove ${invitee.name} from the guest list?`;
+    if (!window.confirm(warning)) return;
+
+    setBusy(true);
+    try {
+      const response = await fetch(`/api/admin/invitees/${invitee.id}`, {
+        method: "DELETE",
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        announce("error", payload?.error ?? "Could not remove.");
+        return;
+      }
+      setInvitees(payload.invitees);
+      setTeams(payload.teams);
+      announce("ok", `${invitee.name} removed from the guest list.`);
     } finally {
       setBusy(false);
     }
@@ -133,6 +205,7 @@ export default function AdminPanel({ initialEvent, initialTeams }: Props) {
   }
 
   const totalMembers = teams.reduce((sum, t) => sum + t.members.length, 0);
+  const joinedCount = invitees.filter((i) => i.memberId).length;
 
   return (
     <main className="min-h-dvh px-5 py-10">
@@ -344,6 +417,93 @@ export default function AdminPanel({ initialEvent, initialTeams }: Props) {
           </div>
         </Section>
 
+        <Section title="Guest list">
+          <p className="mb-4 text-sm text-white/60">
+            People join by entering their email, which is matched against this
+            list to get their name. An address that is not here cannot join, and
+            each one can be used only once.
+          </p>
+
+          <label className="block">
+            <span className="mb-1.5 block text-sm font-medium text-white/70">
+              Add people
+            </span>
+            <textarea
+              value={guestPaste}
+              onChange={(e) => setGuestPaste(e.target.value)}
+              rows={5}
+              spellCheck={false}
+              placeholder={"ada@company.com, Ada Lovelace\ngrace@company.com, Grace Hopper"}
+              className={`${fieldClass} resize-y font-mono text-sm`}
+            />
+            <span className="mt-1 block text-xs text-white/40">
+              One per line as <code>email, name</code>. Tabs and semicolons work
+              too, so you can paste two columns straight from a spreadsheet. A
+              bare email gets a name guessed from the address. Re-pasting an
+              existing address just corrects the name.
+            </span>
+          </label>
+
+          <button
+            onClick={addGuests}
+            disabled={busy || !guestPaste.trim()}
+            className="mt-3 rounded-xl bg-sky-500 px-5 py-3 font-bold transition active:scale-95 disabled:bg-slate-700 disabled:text-white/40"
+          >
+            {busy ? "Adding…" : "Add to guest list"}
+          </button>
+
+          {guestErrors.length > 0 && (
+            <ul className="mt-4 space-y-1 rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 text-xs text-amber-200">
+              {guestErrors.map((message) => (
+                <li key={message}>{message}</li>
+              ))}
+            </ul>
+          )}
+
+          <div className="mt-6">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-white/40">
+              {invitees.length} invited · {joinedCount} joined
+            </p>
+            {invitees.length === 0 ? (
+              <p className="text-sm text-white/35">
+                Nobody invited yet. Until you add someone, no one can join.
+              </p>
+            ) : (
+              <ul className="divide-y divide-white/5">
+                {invitees.map((invitee) => (
+                  <li
+                    key={invitee.id}
+                    className="flex items-center justify-between gap-3 py-2"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">{invitee.name}</p>
+                      <p className="truncate text-xs text-white/45">{invitee.email}</p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider ${
+                          invitee.memberId
+                            ? "bg-emerald-400/15 text-emerald-200"
+                            : "bg-white/5 text-white/40"
+                        }`}
+                      >
+                        {invitee.memberId ? `Team ${invitee.teamNumber}` : "Not yet"}
+                      </span>
+                      <button
+                        onClick={() => removeGuest(invitee)}
+                        disabled={busy}
+                        className="rounded-lg px-3 py-1 text-xs font-semibold text-rose-300 transition hover:bg-rose-500/10 active:scale-95 disabled:opacity-40"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </Section>
+
         <Section title="Roster">
           {teams.length === 0 ? (
             <p className="text-sm text-white/45">No teams configured yet.</p>
@@ -375,8 +535,15 @@ export default function AdminPanel({ initialEvent, initialTeams }: Props) {
                           key={member.id}
                           className="flex items-center justify-between gap-3 py-2"
                         >
-                          <span className="truncate text-sm font-medium">
-                            {member.name}
+                          <span className="min-w-0 truncate">
+                            <span className="block truncate text-sm font-medium">
+                              {member.name}
+                            </span>
+                            {member.email && (
+                              <span className="block truncate text-xs text-white/40">
+                                {member.email}
+                              </span>
+                            )}
                           </span>
                           <button
                             onClick={() => removeMember(member.id, member.name)}

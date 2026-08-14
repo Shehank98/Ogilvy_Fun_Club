@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { isAdminRequest } from "@/lib/auth";
 import { getOrCreateEvent, loadTeams, syncTeams } from "@/lib/event";
+import { loadInvitees } from "@/lib/invitees";
 import { fail, ok } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
@@ -21,5 +22,10 @@ export async function POST() {
     await tx.event.update({ where: { id: event.id }, data: { assignPointer: 0 } });
   });
 
-  return ok({ teams: await loadTeams(event.id) });
+  // The guest list deliberately survives a reset: the same people are usually
+  // being redrawn. Their claims are released with the members.
+  return ok({
+    teams: await loadTeams(event.id),
+    invitees: await loadInvitees(event.id),
+  });
 }
