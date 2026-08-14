@@ -23,6 +23,9 @@ export default function AdminPanel({
   const router = useRouter();
   const [event, setEvent] = useState(initialEvent);
   const [teams, setTeams] = useState(initialTeams);
+  const [nameDrafts, setNameDrafts] = useState<Record<string, string>>(() =>
+    Object.fromEntries(initialTeams.map((t) => [t.id, t.name ?? ""]))
+  );
   const [invitees, setInvitees] = useState(initialInvitees);
   const [guestPaste, setGuestPaste] = useState("");
   const [guestErrors, setGuestErrors] = useState<string[]>([]);
@@ -36,6 +39,43 @@ export default function AdminPanel({
   function announce(tone: "ok" | "error", text: string) {
     setToast({ tone, text });
     window.setTimeout(() => setToast(null), 4000);
+  }
+
+  // Refresh the team list and re-seed the name inputs from the server, so the
+  // drafts always start from what's actually stored (teams change on reset,
+  // resize, and member/guest removal).
+  function applyTeams(next: PublicTeam[]) {
+    setTeams(next);
+    setNameDrafts(Object.fromEntries(next.map((t) => [t.id, t.name ?? ""])));
+  }
+
+  const namesDirty = teams.some(
+    (t) => (nameDrafts[t.id] ?? "").trim() !== (t.name ?? "")
+  );
+
+  async function saveTeamNames() {
+    setBusy(true);
+    try {
+      const names = Object.fromEntries(
+        teams.map((t) => [t.id, nameDrafts[t.id] ?? ""])
+      );
+      const response = await fetch("/api/admin/teams", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ names }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        announce("error", payload?.error ?? "Could not save team names.");
+        return;
+      }
+      applyTeams(payload.teams);
+      announce("ok", "Team names saved.");
+    } catch {
+      announce("error", "Couldn't reach the server.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function save(patch: Partial<PublicEvent>) {
@@ -55,7 +95,7 @@ export default function AdminPanel({
 
       setEvent(payload.event);
       setDraft(payload.event);
-      setTeams(payload.teams);
+      applyTeams(payload.teams);
       announce("ok", "Saved.");
       return true;
     } catch {
@@ -107,7 +147,7 @@ export default function AdminPanel({
         announce("error", payload?.error ?? "Could not remove.");
         return;
       }
-      setTeams(payload.teams);
+      applyTeams(payload.teams);
       if (payload.invitees) setInvitees(payload.invitees);
       announce("ok", `${name} removed. Their email can be used again.`);
     } finally {
@@ -133,7 +173,7 @@ export default function AdminPanel({
         announce("error", payload?.error ?? "Could not reset.");
         return;
       }
-      setTeams(payload.teams);
+      applyTeams(payload.teams);
       if (payload.invitees) setInvitees(payload.invitees);
       announce("ok", "Event reset. The draw starts from team 1.");
     } finally {
@@ -192,7 +232,7 @@ export default function AdminPanel({
         return;
       }
       setInvitees(payload.invitees);
-      setTeams(payload.teams);
+      applyTeams(payload.teams);
       announce("ok", `${invitee.name} removed from the guest list.`);
     } finally {
       setBusy(false);
@@ -298,6 +338,67 @@ export default function AdminPanel({
             count is blocked while the teams being removed still have members.
             Remove them or reset the event first.
           </p>
+        </Section>
+
+        <Section title="Team names">
+          <p className="mb-4 text-sm text-white/60">
+            Give teams their own names to show in the draw and on the boards.
+            Leave a box blank to keep the default — that team stays{" "}
+            <span className="font-semibold">Team {`{number}`}</span>. You can mix
+            both: name some, leave others default.
+          </p>
+
+          {teams.length === 0 ? (
+            <p className="text-sm text-white/45">No teams configured yet.</p>
+          ) : (
+            <>
+              <div className="space-y-3">
+                {teams.map((team) => (
+                  <div key={team.id} className="flex items-center gap-3">
+                    <span
+                      className="h-4 w-4 shrink-0 rounded-full"
+                      style={{ background: team.color }}
+                      aria-hidden
+                    />
+                    <span className="w-16 shrink-0 text-xs font-semibold text-white/45">
+                      Team {team.teamNumber}
+                    </span>
+                    <input
+                      value={nameDrafts[team.id] ?? ""}
+                      placeholder={`Team ${team.teamNumber} (default)`}
+                      maxLength={60}
+                      onChange={(e) =>
+                        setNameDrafts((d) => ({ ...d, [team.id]: e.target.value }))
+                      }
+                      className={fieldClass}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <button
+                  onClick={saveTeamNames}
+                  disabled={busy || !namesDirty}
+                  className="rounded-xl bg-sky-500 px-5 py-3 font-bold transition active:scale-95 disabled:bg-slate-700 disabled:text-white/40"
+                >
+                  {busy ? "Saving…" : namesDirty ? "Save team names" : "Saved"}
+                </button>
+                {namesDirty && (
+                  <button
+                    onClick={() =>
+                      setNameDrafts(
+                        Object.fromEntries(teams.map((t) => [t.id, t.name ?? ""]))
+                      )
+                    }
+                    className="text-sm text-white/50 underline-offset-4 hover:underline"
+                  >
+                    Discard
+                  </button>
+                )}
+              </div>
+            </>
+          )}
         </Section>
 
         <Section title="Event details">
@@ -519,7 +620,7 @@ export default function AdminPanel({
                 >
                   <div className="mb-3 flex items-baseline justify-between">
                     <h3 className="font-bold" style={{ color: team.color }}>
-                      Team {team.teamNumber}
+                      {team.name?.trim() ? team.name.trim() : `Team ${team.teamNumber}`}
                     </h3>
                     <span className="text-xs text-white/45">
                       {team.members.length}/{event.maxPerTeam}
