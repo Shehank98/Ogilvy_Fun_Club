@@ -146,7 +146,7 @@ export default function JoinExperience({ event, teamColors, spotsLeft, hasTeams 
             onChange={(e) => setEmail(e.target.value)}
             type="email"
             inputMode="email"
-            placeholder="you@company.com"
+            placeholder="you@ogilvy.com"
             aria-label="Your email address"
             maxLength={MAX_EMAIL_LENGTH}
             autoComplete="email"

@@ -329,7 +329,7 @@ export default function AdminPanel({
             </div>
             <TextField
               label="Venue"
-              placeholder="The Basement Bar"
+              placeholder="Strike Lanes"
               value={draft.venue}
               onChange={(venue) => setDraft((d) => ({ ...d, venue }))}
             />
@@ -433,7 +433,7 @@ export default function AdminPanel({
               onChange={(e) => setGuestPaste(e.target.value)}
               rows={5}
               spellCheck={false}
-              placeholder={"ada@company.com, Ada Lovelace\ngrace@company.com, Grace Hopper"}
+              placeholder={"ada.lovelace@ogilvy.com, Ada Lovelace\ngrace.hopper@ogilvy.com, Grace Hopper"}
               className={`${fieldClass} resize-y font-mono text-sm`}
             />
             <span className="mt-1 block text-xs text-white/40">
