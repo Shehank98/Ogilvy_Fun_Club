@@ -24,5 +24,11 @@ export default async function TeamsPage() {
   const event = await getOrCreateEvent();
   const teams = await loadTeams(event.id);
 
-  return <TeamsBoard initialEvent={toPublicEvent(event)} initialTeams={teams} />;
+  return (
+    <TeamsBoard
+      initialEvent={toPublicEvent(event)}
+      initialTeams={teams}
+      initialAssignPointer={event.assignPointer}
+    />
+  );
 }

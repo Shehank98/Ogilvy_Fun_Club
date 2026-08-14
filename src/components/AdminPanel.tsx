@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { PublicEvent, PublicTeam } from "@/lib/event";
 import type { PublicInvitee } from "@/lib/invitees";
 import { rgbaFromHex } from "@/lib/colors";
@@ -56,6 +56,68 @@ export default function AdminPanel({
   const namesDirty = teams.some(
     (t) => (nameDrafts[t.id] ?? "").trim() !== (t.name ?? "")
   );
+
+  // Read the latest values inside the polling interval without re-subscribing.
+  const busyRef = useRef(busy);
+  busyRef.current = busy;
+  const dirtyRef = useRef(dirty);
+  dirtyRef.current = dirty;
+
+  // Live refresh: poll the admin snapshot every few seconds so rosters, join
+  // statuses and the "next team" indicator stay current as people join —
+  // without a manual reload. It merges carefully so it never clobbers the
+  // organiser's in-progress edits.
+  useEffect(() => {
+    let cancelled = false;
+
+    async function poll() {
+      if (document.visibilityState !== "visible") return;
+      if (busyRef.current) return; // a mutation is in flight; let it settle
+      try {
+        const response = await fetch("/api/admin/event", { cache: "no-store" });
+        if (response.status === 401) {
+          // Organiser session expired with the panel left open — let the PIN
+          // gate take over rather than showing a board that stopped updating.
+          router.refresh();
+          return;
+        }
+        if (!response.ok) return;
+        const payload = await response.json();
+        if (cancelled || busyRef.current) return;
+
+        setInvitees(payload.invitees);
+        setTeams(payload.teams);
+        if (typeof payload.assignPointer === "number") {
+          setPointer(payload.assignPointer);
+        }
+        // Keep any team name the organiser is mid-edit; seed only new teams.
+        setNameDrafts((prev) => {
+          const next: Record<string, string> = {};
+          for (const t of payload.teams as PublicTeam[]) {
+            next[t.id] = t.id in prev ? prev[t.id] : t.name ?? "";
+          }
+          return next;
+        });
+        // Only refresh the settings form when there's nothing unsaved to lose.
+        if (!dirtyRef.current) {
+          setEvent(payload.event);
+          setDraft(payload.event);
+        }
+      } catch {
+        // Keep the last good snapshot and try again next tick.
+      }
+    }
+
+    const timer = window.setInterval(poll, 5000);
+    const onVisible = () => document.visibilityState === "visible" && void poll();
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [router]);
 
   async function saveTeamNames() {
     setBusy(true);
@@ -277,9 +339,15 @@ export default function AdminPanel({
         <header className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-black">Event admin</h1>
-            <p className="mt-1 text-sm text-white/50">
-              {totalMembers} signed up across {teams.length}{" "}
-              {teams.length === 1 ? "team" : "teams"}
+            <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-white/50">
+              <span>
+                {totalMembers} signed up across {teams.length}{" "}
+                {teams.length === 1 ? "team" : "teams"}
+              </span>
+              <span className="inline-flex items-center gap-1 text-xs text-emerald-300/80">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+                Live
+              </span>
             </p>
           </div>
           <div className="flex shrink-0 gap-2">

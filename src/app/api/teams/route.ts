@@ -16,5 +16,7 @@ export async function GET() {
 
   const event = await getOrCreateEvent();
   const teams = await loadTeams(event.id);
-  return ok({ event: toPublicEvent(event), teams });
+  // Organiser-only board, so it's safe to expose the rotation pointer here
+  // (kept off PublicEvent so the public join page never sees it).
+  return ok({ event: toPublicEvent(event), teams, assignPointer: event.assignPointer });
 }

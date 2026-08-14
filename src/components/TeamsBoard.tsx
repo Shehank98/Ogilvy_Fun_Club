@@ -6,18 +6,22 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { rgbaFromHex } from "@/lib/colors";
 import type { PublicEvent, PublicTeam } from "@/lib/event";
+import { selectTeam } from "@/lib/assignment";
 
 const POLL_INTERVAL_MS = 5000;
 
 export default function TeamsBoard({
   initialEvent,
   initialTeams,
+  initialAssignPointer,
 }: {
   initialEvent: PublicEvent;
   initialTeams: PublicTeam[];
+  initialAssignPointer: number;
 }) {
   const [event, setEvent] = useState(initialEvent);
   const [teams, setTeams] = useState(initialTeams);
+  const [pointer, setPointer] = useState(initialAssignPointer);
   const router = useRouter();
 
   useEffect(() => {
@@ -37,10 +41,12 @@ export default function TeamsBoard({
         const payload = (await response.json()) as {
           event: PublicEvent;
           teams: PublicTeam[];
+          assignPointer?: number;
         };
         if (cancelled) return;
         setEvent(payload.event);
         setTeams(payload.teams);
+        if (typeof payload.assignPointer === "number") setPointer(payload.assignPointer);
       } catch {
         // Keep showing the last good board until the next tick succeeds.
       }
@@ -56,6 +62,19 @@ export default function TeamsBoard({
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, [router]);
+
+  // Which team the next person to join will land in — the same round-robin
+  // decision the join endpoint makes (skips any team already full).
+  const nextSelection = selectTeam(
+    teams.map((t) => ({
+      id: t.id,
+      teamNumber: t.teamNumber,
+      memberCount: t.members.length,
+    })),
+    pointer,
+    event.maxPerTeam
+  );
+  const nextTeamId = nextSelection.status === "assigned" ? nextSelection.team.id : null;
 
   return (
     <main className="min-h-dvh px-5 py-10">
@@ -74,7 +93,12 @@ export default function TeamsBoard({
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {teams.map((team) => (
-              <TeamCard key={team.id} team={team} maxPerTeam={event.maxPerTeam} />
+              <TeamCard
+                key={team.id}
+                team={team}
+                maxPerTeam={event.maxPerTeam}
+                isNext={team.id === nextTeamId}
+              />
             ))}
           </div>
         )}
@@ -92,7 +116,15 @@ export default function TeamsBoard({
   );
 }
 
-function TeamCard({ team, maxPerTeam }: { team: PublicTeam; maxPerTeam: number }) {
+function TeamCard({
+  team,
+  maxPerTeam,
+  isNext,
+}: {
+  team: PublicTeam;
+  maxPerTeam: number;
+  isNext: boolean;
+}) {
   const reducedMotion = useReducedMotion() ?? false;
   const filled = team.members.length;
   const isFull = filled >= maxPerTeam && maxPerTeam > 0;
@@ -104,10 +136,11 @@ function TeamCard({ team, maxPerTeam }: { team: PublicTeam; maxPerTeam: number }
       whileHover={reducedMotion ? undefined : { y: -6 }}
       whileTap={reducedMotion ? undefined : { y: -2, scale: 0.99 }}
       transition={{ type: "spring", stiffness: 320, damping: 24 }}
-      className="rounded-3xl border p-5 backdrop-blur will-change-transform"
+      className="relative rounded-3xl border p-5 backdrop-blur will-change-transform"
       style={{
-        borderColor: rgbaFromHex(team.color, 0.45),
+        borderColor: rgbaFromHex(team.color, isNext ? 0.9 : 0.45),
         background: rgbaFromHex(team.color, 0.1),
+        boxShadow: isNext ? `0 0 0 2px ${rgbaFromHex(team.color, 0.6)}` : undefined,
       }}
     >
       <div className="flex items-baseline justify-between gap-3">
@@ -118,6 +151,18 @@ function TeamCard({ team, maxPerTeam }: { team: PublicTeam; maxPerTeam: number }
           {filled}/{maxPerTeam}
         </span>
       </div>
+
+      {isNext && (
+        <motion.p
+          layout={!reducedMotion}
+          initial={reducedMotion ? false : { opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-400/15 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.15em] text-emerald-200"
+        >
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
+          Next to fill
+        </motion.p>
+      )}
 
       <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-white/10">
         <motion.div
