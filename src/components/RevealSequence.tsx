@@ -1,6 +1,11 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import {
+  AnimatePresence,
+  motion,
+  useAnimationControls,
+  useReducedMotion,
+} from "framer-motion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ROSTER_STAGGER_MS,
@@ -29,9 +34,9 @@ type Props = {
 /**
  * The one-time, full-screen intro. Steps are built from the Event record and
  * played one at a time with `AnimatePresence`; every transition is the same
- * fade-and-lift so the sequence reads as one piece. Tapping skips ahead — past
- * the intro copy while it is playing, or straight to the result page once the
- * team is out.
+ * fade-and-lift so the sequence reads as one piece. It plays straight through:
+ * an itinerary of event details, a decelerating draw, then the team lands with
+ * an impact flash, god-rays, a holographic logo and a wash to the team colour.
  */
 export default function RevealSequence({
   event,
@@ -91,6 +96,31 @@ export default function RevealSequence({
 
   const revealed = step?.kind === "reveal" || step?.kind === "roster";
 
+  // The event-detail cards (Date, Time, Venue, …) drive a small itinerary rail.
+  // The intro message is emphasis copy, not part of the itinerary.
+  const detailSteps = useMemo(
+    () => steps.filter((s) => s.kind === "info" && !s.emphasis),
+    [steps]
+  );
+  const detailProgress =
+    step?.kind === "info" && !step.emphasis
+      ? {
+          index: detailSteps.findIndex((s) => s.id === step.id),
+          total: detailSteps.length,
+        }
+      : undefined;
+
+  // Impact shake fired when the team lands, for a physical "it hit" feel.
+  const shakeControls = useAnimationControls();
+  useEffect(() => {
+    if (reducedMotion || step?.kind !== "reveal") return;
+    void shakeControls.start({
+      x: [0, -11, 9, -6, 4, -2, 0],
+      y: [0, 7, -5, 4, -2, 1, 0],
+      transition: { duration: 0.55, ease: "easeOut" },
+    });
+  }, [step?.kind, reducedMotion, shakeControls]);
+
   // Neutral until the team is out, then the whole screen takes the team colour.
   const background = revealed
     ? `radial-gradient(ellipse at center, ${rgbaFromHex(team.color, 0.42)}, #020617 72%)`
@@ -110,7 +140,26 @@ export default function RevealSequence({
       aria-modal="true"
       aria-label="Team reveal"
     >
-      <div className="pointer-events-none relative flex flex-1 items-center justify-center px-6 py-20">
+      {/* Colour-grade wash: the team colour bleeds across the whole scene the
+          moment the team lands, on top of the neutral draw background. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background: `radial-gradient(ellipse at center, ${rgbaFromHex(team.color, 0.28)}, transparent 68%)`,
+          opacity: revealed ? 1 : 0,
+          transition: "opacity 1100ms ease",
+        }}
+      />
+
+      <motion.div
+        animate={shakeControls}
+        className="pointer-events-none relative flex flex-1 items-center justify-center px-6 py-20"
+        style={{
+          filter: revealed ? "saturate(1.15)" : "saturate(0.9)",
+          transition: "filter 1100ms ease",
+        }}
+      >
         <AnimatePresence mode="wait">
           <motion.div
             key={step?.id ?? "done"}
@@ -120,9 +169,19 @@ export default function RevealSequence({
             transition={transition}
             className="w-full max-w-2xl text-center"
           >
-            {step?.kind === "info" && <InfoStep step={step} reducedMotion={reducedMotion} />}
+            {step?.kind === "info" && (
+              <InfoStep
+                step={step}
+                reducedMotion={reducedMotion}
+                detailProgress={detailProgress}
+              />
+            )}
             {step?.kind === "shuffle" && (
-              <ShuffleStep colors={teamColors} reducedMotion={reducedMotion} />
+              <ShuffleStep
+                colors={teamColors}
+                reducedMotion={reducedMotion}
+                durationMs={step.durationMs}
+              />
             )}
             {step?.kind === "reveal" && (
               <TeamRevealStep team={team} reducedMotion={reducedMotion} />
@@ -132,7 +191,18 @@ export default function RevealSequence({
             )}
           </motion.div>
         </AnimatePresence>
-      </div>
+      </motion.div>
+
+      {/* Impact flash: a white bloom the instant the team lands, fading fast. */}
+      {step?.kind === "reveal" && !reducedMotion && (
+        <motion.div
+          aria-hidden
+          initial={{ opacity: 0.85 }}
+          animate={{ opacity: 0 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="pointer-events-none absolute inset-0 z-30 bg-white"
+        />
+      )}
 
       <div className="safe-bottom pointer-events-none relative flex flex-col items-center gap-4 px-6">
         <StepProgress
@@ -145,9 +215,24 @@ export default function RevealSequence({
   );
 }
 
-function InfoStep({ step, reducedMotion }: { step: RevealStep & { kind: "info" }; reducedMotion: boolean }) {
+function InfoStep({
+  step,
+  reducedMotion,
+  detailProgress,
+}: {
+  step: RevealStep & { kind: "info" };
+  reducedMotion: boolean;
+  detailProgress?: { index: number; total: number };
+}) {
   return (
     <div className="space-y-4">
+      {detailProgress && detailProgress.total > 1 && (
+        <ItineraryRail
+          index={detailProgress.index}
+          total={detailProgress.total}
+          reducedMotion={reducedMotion}
+        />
+      )}
       {step.label && (
         <motion.p
           initial={reducedMotion ? false : { opacity: 0 }}
@@ -157,6 +242,24 @@ function InfoStep({ step, reducedMotion }: { step: RevealStep & { kind: "info" }
         >
           {step.label}
         </motion.p>
+      )}
+      {/* A thin accent line strokes itself in between the label and the value. */}
+      {!step.emphasis && (
+        <motion.div
+          aria-hidden
+          initial={reducedMotion ? false : { scaleX: 0, opacity: 0 }}
+          animate={{ scaleX: 1, opacity: 1 }}
+          transition={{
+            duration: reducedMotion ? 0 : 0.7,
+            delay: reducedMotion ? 0 : 0.28,
+            ease: [0.16, 1, 0.3, 1],
+          }}
+          className="mx-auto h-px w-16 origin-left sm:w-24"
+          style={{
+            background:
+              "linear-gradient(90deg, transparent, rgba(255,255,255,0.7), transparent)",
+          }}
+        />
       )}
       <p
         className={
@@ -171,17 +274,90 @@ function InfoStep({ step, reducedMotion }: { step: RevealStep & { kind: "info" }
   );
 }
 
-function ShuffleStep({ colors, reducedMotion }: { colors: string[]; reducedMotion: boolean }) {
+/**
+ * A small itinerary rail — dots connected by a line — that advances through the
+ * event-detail cards (Date -> Time -> Venue -> …). Deliberately cool and
+ * neutral: the full team colour is saved for the reveal, so the setup feels
+ * like a build-up rather than competing with the payoff.
+ */
+function ItineraryRail({
+  index,
+  total,
+  reducedMotion,
+}: {
+  index: number;
+  total: number;
+  reducedMotion: boolean;
+}) {
+  return (
+    <div aria-hidden className="mx-auto mb-6 flex items-center justify-center">
+      {Array.from({ length: total }, (_, i) => (
+        <div key={i} className="flex items-center">
+          {i > 0 && (
+            <span
+              className="h-px w-6 sm:w-8"
+              style={{
+                background:
+                  i <= index ? "rgba(226,232,240,0.7)" : "rgba(100,116,139,0.35)",
+              }}
+            />
+          )}
+          <motion.span
+            initial={false}
+            animate={{
+              scale: i === index ? 1.35 : 1,
+              opacity: i <= index ? 1 : 0.4,
+            }}
+            transition={{ duration: reducedMotion ? 0 : 0.35 }}
+            className="h-2 w-2 rounded-full"
+            style={{
+              background:
+                i === index
+                  ? "#e2e8f0"
+                  : i < index
+                    ? "rgba(226,232,240,0.75)"
+                    : "#64748b",
+            }}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ShuffleStep({
+  colors,
+  reducedMotion,
+  durationMs,
+}: {
+  colors: string[];
+  reducedMotion: boolean;
+  durationMs: number;
+}) {
   const [tick, setTick] = useState(0);
 
+  // Slow-motion snap: the number cycles fast, then each step takes a little
+  // longer than the last, so the spinner visibly decelerates into a stop —
+  // like a draft wheel coming to rest.
   useEffect(() => {
     if (reducedMotion || colors.length === 0) return;
-    const timer = window.setInterval(() => setTick((t) => t + 1), 170);
-    return () => window.clearInterval(timer);
+    let cancelled = false;
+    let delay = 80;
+    let timer = window.setTimeout(function run() {
+      if (cancelled) return;
+      setTick((t) => t + 1);
+      delay = Math.min(delay * 1.16, 520);
+      timer = window.setTimeout(run, delay);
+    }, delay);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, [reducedMotion, colors.length]);
 
   const activeIndex = colors.length > 0 ? tick % colors.length : 0;
   const activeColor = colors[activeIndex] ?? "#64748b";
+  const seconds = durationMs / 1000;
 
   return (
     <div className="space-y-10">
@@ -190,10 +366,19 @@ function ShuffleStep({ colors, reducedMotion }: { colors: string[]; reducedMotio
       </p>
       <div className="flex items-center justify-center">
         <motion.div
-          animate={reducedMotion ? {} : { rotate: 360 }}
-          transition={{ duration: 1.6, repeat: Infinity, ease: "linear" }}
+          initial={reducedMotion ? false : { rotate: 0, scale: 1 }}
+          animate={reducedMotion ? {} : { rotate: 900, scale: [1, 1, 1.12, 1] }}
+          transition={{
+            // Strong ease-out: quick spins up front, drifting to a near-stop.
+            rotate: { duration: seconds, ease: [0.1, 0.7, 0.15, 1] },
+            // A last-moment pop as it locks in.
+            scale: { duration: seconds, times: [0, 0.85, 0.93, 1], ease: "easeOut" },
+          }}
           className="grid h-32 w-32 place-items-center rounded-full border-4 border-white/10 will-change-transform"
-          style={{ borderTopColor: activeColor }}
+          style={{
+            borderTopColor: activeColor,
+            boxShadow: `0 0 34px ${rgbaFromHex(activeColor, 0.5)}`,
+          }}
         >
           <motion.span
             key={activeIndex}
@@ -250,6 +435,30 @@ function TeamRevealStep({ team, reducedMotion }: { team: RevealTeam; reducedMoti
 
       {team.logoUrl && (
         <div className="relative flex justify-center">
+          {/* Rotating god-rays fanning out from behind the logo. */}
+          {!reducedMotion && (
+            <motion.div
+              aria-hidden
+              initial={{ opacity: 0, rotate: 0 }}
+              animate={{ opacity: 0.55, rotate: 360 }}
+              transition={{
+                opacity: { duration: 0.9, delay: 0.15 },
+                rotate: { duration: 16, repeat: Infinity, ease: "linear" },
+              }}
+              className="pointer-events-none absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 sm:h-96 sm:w-96"
+              style={{
+                background: `repeating-conic-gradient(from 0deg, ${rgbaFromHex(
+                  team.color,
+                  0.22
+                )} 0deg 7deg, transparent 7deg 22deg)`,
+                maskImage:
+                  "radial-gradient(circle, black 18%, transparent 66%)",
+                WebkitMaskImage:
+                  "radial-gradient(circle, black 18%, transparent 66%)",
+              }}
+            />
+          )}
+
           {/* Pulsing glow halo in the team colour, lingering behind the logo. */}
           {!reducedMotion && (
             <motion.div
@@ -283,16 +492,23 @@ function TeamRevealStep({ team, reducedMotion }: { team: RevealTeam; reducedMoti
             className="relative overflow-hidden rounded-2xl"
           >
             <TeamLogo url={team.logoUrl} color={team.color} />
+            {/* Holographic sheen drifting across the logo, over and over. */}
             {!reducedMotion && (
               <motion.div
                 aria-hidden
-                initial={{ x: "-160%" }}
-                animate={{ x: "160%" }}
-                transition={{ duration: 0.9, delay: 0.5, ease: "easeInOut" }}
-                className="pointer-events-none absolute inset-y-0 w-1/2 -skew-x-12"
+                initial={{ x: "-130%" }}
+                animate={{ x: "130%" }}
+                transition={{
+                  duration: 2.4,
+                  repeat: Infinity,
+                  repeatDelay: 0.6,
+                  ease: "easeInOut",
+                  delay: 0.4,
+                }}
+                className="pointer-events-none absolute inset-y-0 w-2/3 -skew-x-12 mix-blend-overlay"
                 style={{
                   background:
-                    "linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent)",
+                    "linear-gradient(90deg, transparent, rgba(255,255,255,0.25) 35%, rgba(160,220,255,0.4) 50%, rgba(255,180,255,0.32) 65%, transparent)",
                 }}
               />
             )}
