@@ -243,24 +243,6 @@ function InfoStep({
           {step.label}
         </motion.p>
       )}
-      {/* A thin accent line strokes itself in between the label and the value. */}
-      {!step.emphasis && (
-        <motion.div
-          aria-hidden
-          initial={reducedMotion ? false : { scaleX: 0, opacity: 0 }}
-          animate={{ scaleX: 1, opacity: 1 }}
-          transition={{
-            duration: reducedMotion ? 0 : 0.7,
-            delay: reducedMotion ? 0 : 0.28,
-            ease: [0.16, 1, 0.3, 1],
-          }}
-          className="mx-auto h-px w-16 origin-left sm:w-24"
-          style={{
-            background:
-              "linear-gradient(90deg, transparent, rgba(255,255,255,0.7), transparent)",
-          }}
-        />
-      )}
       <p
         className={
           step.emphasis
