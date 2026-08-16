@@ -13,6 +13,8 @@ type Props = {
   initialTeams: PublicTeam[];
   initialInvitees: PublicInvitee[];
   initialAssignPointer: number;
+  /** Owner tier: unlocks hidden controls (moving people between teams). */
+  isOwner: boolean;
 };
 
 type Toast = { tone: "ok" | "error"; text: string } | null;
@@ -22,6 +24,7 @@ export default function AdminPanel({
   initialTeams,
   initialInvitees,
   initialAssignPointer,
+  isOwner,
 }: Props) {
   const router = useRouter();
   const [event, setEvent] = useState(initialEvent);
@@ -235,6 +238,29 @@ export default function AdminPanel({
       applyTeams(payload.teams);
       if (payload.invitees) setInvitees(payload.invitees);
       announce("ok", `${name} removed. Their email can be used again.`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Owner-only: move a member onto a chosen team. The endpoint 404s for a
+  // non-owner session, so this control never renders unless `isOwner` anyway.
+  async function moveMember(memberId: string, teamId: string) {
+    setBusy(true);
+    try {
+      const response = await fetch(`/api/admin/members/${memberId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamId }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        announce("error", payload?.error ?? "Could not move.");
+        return;
+      }
+      applyTeams(payload.teams);
+      if (payload.invitees) setInvitees(payload.invitees);
+      announce("ok", "Moved.");
     } finally {
       setBusy(false);
     }
@@ -820,13 +846,30 @@ export default function AdminPanel({
                               </span>
                             )}
                           </span>
-                          <button
-                            onClick={() => removeMember(member.id, member.name)}
-                            disabled={busy}
-                            className="shrink-0 rounded-lg px-3 py-1 text-xs font-semibold text-rose-300 transition hover:bg-rose-500/10 active:scale-95 disabled:opacity-40"
-                          >
-                            Remove
-                          </button>
+                          <div className="flex shrink-0 items-center gap-2">
+                            {isOwner && teams.length > 1 && (
+                              <select
+                                value={team.id}
+                                onChange={(e) => moveMember(member.id, e.target.value)}
+                                disabled={busy}
+                                aria-label={`Move ${member.name} to another team`}
+                                className="rounded-lg border border-white/15 bg-slate-800 px-2 py-1 text-xs font-semibold text-white/80 outline-none transition focus:border-sky-400/60 disabled:opacity-40"
+                              >
+                                {teams.map((t) => (
+                                  <option key={t.id} value={t.id}>
+                                    {t.name?.trim() ? t.name.trim() : `Team ${t.teamNumber}`}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
+                            <button
+                              onClick={() => removeMember(member.id, member.name)}
+                              disabled={busy}
+                              className="rounded-lg px-3 py-1 text-xs font-semibold text-rose-300 transition hover:bg-rose-500/10 active:scale-95 disabled:opacity-40"
+                            >
+                              Remove
+                            </button>
+                          </div>
                         </li>
                       ))}
                     </ul>
