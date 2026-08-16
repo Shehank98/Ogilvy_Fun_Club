@@ -50,11 +50,12 @@ model Invitee {
 }
 
 model Team {
-  id         String @id @default(cuid())
+  id         String  @id @default(cuid())
   eventId    String
   teamNumber Int
   name       String?
   color      String
+  logoUrl    String?
 
   event   Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   members Member[]

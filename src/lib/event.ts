@@ -80,6 +80,7 @@ export type PublicTeam = {
   teamNumber: number;
   name: string | null;
   color: string;
+  logoUrl: string | null;
   members: { id: string; name: string; email: string | null; joinedAt: string }[];
 };
 
@@ -109,6 +110,7 @@ export async function loadTeams(eventId: string): Promise<PublicTeam[]> {
     teamNumber: team.teamNumber,
     name: team.name,
     color: team.color,
+    logoUrl: team.logoUrl,
     members: team.members.map((m) => ({
       id: m.id,
       name: m.name,

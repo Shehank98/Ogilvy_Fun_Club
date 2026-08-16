@@ -16,6 +16,7 @@ export type RevealTeam = {
   teamNumber: number;
   label: string;
   color: string;
+  logoUrl: string | null;
   members: { id: string; name: string }[];
 };
 
@@ -251,6 +252,20 @@ function TeamRevealStep({ team, reducedMotion }: { team: RevealTeam; reducedMoti
       <p className="text-xl font-medium uppercase tracking-[0.3em] text-white/60">
         You&rsquo;re on
       </p>
+      {team.logoUrl && (
+        <motion.div
+          initial={reducedMotion ? false : { scale: 0.5, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={
+            reducedMotion
+              ? { duration: 0 }
+              : { type: "spring", stiffness: 170, damping: 15, delay: 0.05 }
+          }
+          className="flex justify-center"
+        >
+          <TeamLogo url={team.logoUrl} color={team.color} size={144} />
+        </motion.div>
+      )}
       <motion.h1
         initial={reducedMotion ? false : { scale: 0.4, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -265,6 +280,42 @@ function TeamRevealStep({ team, reducedMotion }: { team: RevealTeam; reducedMoti
         {team.label}!
       </motion.h1>
     </div>
+  );
+}
+
+/**
+ * A team's logo, shown next to its name wherever the team is revealed. Sits on
+ * a soft tint of the team colour so a logo with transparent or white edges
+ * still reads on the dark background. `onError` hides a broken URL so a bad or
+ * non-direct link (a Google Drive share page, say) never leaves an empty box.
+ */
+function TeamLogo({
+  url,
+  color,
+  size,
+}: {
+  url: string;
+  color: string;
+  size: number;
+}) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return null;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={url}
+      alt=""
+      width={size}
+      height={size}
+      onError={() => setFailed(true)}
+      className="rounded-2xl border object-contain p-2"
+      style={{
+        width: size,
+        height: size,
+        borderColor: rgbaFromHex(color, 0.5),
+        background: rgbaFromHex(color, 0.14),
+      }}
+    />
   );
 }
 

@@ -17,6 +17,7 @@ export type ResultData = {
     teamNumber: number;
     label: string;
     color: string;
+    logoUrl: string | null;
     members: RosterMember[];
   };
 };
@@ -77,8 +78,13 @@ export default function ResultView({ initial }: { initial: ResultData }) {
             {data.eventTitle}
           </p>
           <p className="mt-6 text-lg text-white/70">You&rsquo;re on</p>
+          {team.logoUrl && (
+            <div className="mt-3 flex justify-center">
+              <TeamLogo url={team.logoUrl} color={team.color} />
+            </div>
+          )}
           <h1
-            className="mt-1 text-5xl font-black leading-none sm:text-6xl"
+            className="mt-2 text-5xl font-black leading-none sm:text-6xl"
             style={{ color: team.color }}
           >
             {team.label}
@@ -129,5 +135,30 @@ export default function ResultView({ initial }: { initial: ResultData }) {
 
       </div>
     </main>
+  );
+}
+
+/**
+ * The team's logo. Sits on a soft tint of the team colour so logos with
+ * transparent or white edges still read on the dark background; a broken or
+ * non-direct URL is hidden rather than left as an empty box.
+ */
+function TeamLogo({ url, color }: { url: string; color: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return null;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={url}
+      alt=""
+      width={96}
+      height={96}
+      onError={() => setFailed(true)}
+      className="h-24 w-24 rounded-2xl border object-contain p-2"
+      style={{
+        borderColor: rgbaFromHex(color, 0.5),
+        background: rgbaFromHex(color, 0.14),
+      }}
+    />
   );
 }

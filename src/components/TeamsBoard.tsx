@@ -143,11 +143,14 @@ function TeamCard({
         boxShadow: isNext ? `0 0 0 2px ${rgbaFromHex(team.color, 0.6)}` : undefined,
       }}
     >
-      <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-xl font-black" style={{ color: team.color }}>
-          {label}
-        </h2>
-        <span className="text-xs font-semibold uppercase tracking-widest text-white/50">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          {team.logoUrl && <TeamLogo url={team.logoUrl} color={team.color} />}
+          <h2 className="truncate text-xl font-black" style={{ color: team.color }}>
+            {label}
+          </h2>
+        </div>
+        <span className="shrink-0 text-xs font-semibold uppercase tracking-widest text-white/50">
           {filled}/{maxPerTeam}
         </span>
       </div>
@@ -216,6 +219,27 @@ function TeamCard({
         )}
       </ul>
     </motion.article>
+  );
+}
+
+/** The team's logo, hidden if the URL is broken or not a direct image link. */
+function TeamLogo({ url, color }: { url: string; color: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return null;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={url}
+      alt=""
+      width={36}
+      height={36}
+      onError={() => setFailed(true)}
+      className="h-9 w-9 shrink-0 rounded-lg border object-contain p-1"
+      style={{
+        borderColor: rgbaFromHex(color, 0.5),
+        background: rgbaFromHex(color, 0.14),
+      }}
+    />
   );
 }
 

@@ -30,6 +30,9 @@ export default function AdminPanel({
   const [nameDrafts, setNameDrafts] = useState<Record<string, string>>(() =>
     Object.fromEntries(initialTeams.map((t) => [t.id, t.name ?? ""]))
   );
+  const [logoDrafts, setLogoDrafts] = useState<Record<string, string>>(() =>
+    Object.fromEntries(initialTeams.map((t) => [t.id, t.logoUrl ?? ""]))
+  );
   const [invitees, setInvitees] = useState(initialInvitees);
   const [guestPaste, setGuestPaste] = useState("");
   const [guestErrors, setGuestErrors] = useState<string[]>([]);
@@ -51,11 +54,16 @@ export default function AdminPanel({
   function applyTeams(next: PublicTeam[]) {
     setTeams(next);
     setNameDrafts(Object.fromEntries(next.map((t) => [t.id, t.name ?? ""])));
+    setLogoDrafts(Object.fromEntries(next.map((t) => [t.id, t.logoUrl ?? ""])));
   }
 
   const namesDirty = teams.some(
     (t) => (nameDrafts[t.id] ?? "").trim() !== (t.name ?? "")
   );
+  const logosDirty = teams.some(
+    (t) => (logoDrafts[t.id] ?? "").trim() !== (t.logoUrl ?? "")
+  );
+  const teamMetaDirty = namesDirty || logosDirty;
 
   // Read the latest values inside the polling interval without re-subscribing.
   const busyRef = useRef(busy);
@@ -90,11 +98,18 @@ export default function AdminPanel({
         if (typeof payload.assignPointer === "number") {
           setPointer(payload.assignPointer);
         }
-        // Keep any team name the organiser is mid-edit; seed only new teams.
+        // Keep any team name/logo the organiser is mid-edit; seed only new teams.
         setNameDrafts((prev) => {
           const next: Record<string, string> = {};
           for (const t of payload.teams as PublicTeam[]) {
             next[t.id] = t.id in prev ? prev[t.id] : t.name ?? "";
+          }
+          return next;
+        });
+        setLogoDrafts((prev) => {
+          const next: Record<string, string> = {};
+          for (const t of payload.teams as PublicTeam[]) {
+            next[t.id] = t.id in prev ? prev[t.id] : t.logoUrl ?? "";
           }
           return next;
         });
@@ -119,24 +134,27 @@ export default function AdminPanel({
     };
   }, [router]);
 
-  async function saveTeamNames() {
+  async function saveTeamMeta() {
     setBusy(true);
     try {
       const names = Object.fromEntries(
         teams.map((t) => [t.id, nameDrafts[t.id] ?? ""])
       );
+      const logos = Object.fromEntries(
+        teams.map((t) => [t.id, logoDrafts[t.id] ?? ""])
+      );
       const response = await fetch("/api/admin/teams", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ names }),
+        body: JSON.stringify({ names, logos }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
-        announce("error", payload?.error ?? "Could not save team names.");
+        announce("error", payload?.error ?? "Could not save teams.");
         return;
       }
       applyTeams(payload.teams);
-      announce("ok", "Team names saved.");
+      announce("ok", "Team names and logos saved.");
     } catch {
       announce("error", "Couldn't reach the server.");
     } finally {
@@ -460,12 +478,14 @@ export default function AdminPanel({
           </p>
         </Section>
 
-        <Section title="Team names">
+        <Section title="Team names & logos">
           <p className="mb-4 text-sm text-white/60">
-            Give teams their own names to show in the draw and on the boards.
-            Leave a box blank to keep the default — that team stays{" "}
+            Give teams their own name and logo to show in the draw and on the
+            boards. Leave the name blank to keep the default — that team stays{" "}
             <span className="font-semibold">Team {`{number}`}</span>. You can mix
-            both: name some, leave others default.
+            both: name some, leave others default. The logo is optional; paste a
+            direct image link (PNG works well) — e.g. an ImgBB link, or a Google
+            Drive link that opens the image itself, not the share page.
           </p>
 
           {teams.length === 0 ? (
@@ -474,43 +494,71 @@ export default function AdminPanel({
             <>
               <div className="space-y-3">
                 {teams.map((team) => (
-                  <div key={team.id} className="flex items-center gap-3">
-                    <span
-                      className="h-4 w-4 shrink-0 rounded-full"
-                      style={{ background: team.color }}
-                      aria-hidden
-                    />
-                    <span className="w-16 shrink-0 text-xs font-semibold text-white/45">
-                      Team {team.teamNumber}
-                    </span>
-                    <input
-                      value={nameDrafts[team.id] ?? ""}
-                      placeholder={`Team ${team.teamNumber} (default)`}
-                      maxLength={60}
-                      onChange={(e) =>
-                        setNameDrafts((d) => ({ ...d, [team.id]: e.target.value }))
-                      }
-                      className={fieldClass}
-                    />
+                  <div
+                    key={team.id}
+                    className="rounded-2xl border border-white/10 bg-white/[0.02] p-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <LogoPreview
+                        url={(logoDrafts[team.id] ?? "").trim()}
+                        color={team.color}
+                        fallbackNumber={team.teamNumber}
+                      />
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className="w-14 shrink-0 text-xs font-semibold text-white/45">
+                            Team {team.teamNumber}
+                          </span>
+                          <input
+                            value={nameDrafts[team.id] ?? ""}
+                            placeholder={`Team ${team.teamNumber} (default)`}
+                            maxLength={60}
+                            onChange={(e) =>
+                              setNameDrafts((d) => ({ ...d, [team.id]: e.target.value }))
+                            }
+                            className={fieldClass}
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="w-14 shrink-0 text-xs font-semibold text-white/45">
+                            Logo
+                          </span>
+                          <input
+                            value={logoDrafts[team.id] ?? ""}
+                            placeholder="https://… (image URL, optional)"
+                            maxLength={2000}
+                            inputMode="url"
+                            spellCheck={false}
+                            onChange={(e) =>
+                              setLogoDrafts((d) => ({ ...d, [team.id]: e.target.value }))
+                            }
+                            className={`${fieldClass} text-sm`}
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
 
               <div className="mt-4 flex flex-wrap items-center gap-3">
                 <button
-                  onClick={saveTeamNames}
-                  disabled={busy || !namesDirty}
+                  onClick={saveTeamMeta}
+                  disabled={busy || !teamMetaDirty}
                   className="rounded-xl bg-sky-500 px-5 py-3 font-bold transition active:scale-95 disabled:bg-slate-700 disabled:text-white/40"
                 >
-                  {busy ? "Saving…" : namesDirty ? "Save team names" : "Saved"}
+                  {busy ? "Saving…" : teamMetaDirty ? "Save names & logos" : "Saved"}
                 </button>
-                {namesDirty && (
+                {teamMetaDirty && (
                   <button
-                    onClick={() =>
+                    onClick={() => {
                       setNameDrafts(
                         Object.fromEntries(teams.map((t) => [t.id, t.name ?? ""]))
-                      )
-                    }
+                      );
+                      setLogoDrafts(
+                        Object.fromEntries(teams.map((t) => [t.id, t.logoUrl ?? ""]))
+                      );
+                    }}
                     className="text-sm text-white/50 underline-offset-4 hover:underline"
                   >
                     Discard
@@ -804,6 +852,49 @@ export default function AdminPanel({
         </Section>
       </div>
     </main>
+  );
+}
+
+/**
+ * Live thumbnail for a team's logo URL as the organiser types it. Falls back to
+ * the team number on an empty or broken link, so a bad or non-direct URL (a
+ * Google Drive share page, say) is obvious immediately rather than saved blind.
+ */
+function LogoPreview({
+  url,
+  color,
+  fallbackNumber,
+}: {
+  url: string;
+  color: string;
+  fallbackNumber: number;
+}) {
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [url]);
+  const show = url !== "" && !failed;
+
+  return (
+    <div
+      className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-xl border"
+      style={{
+        borderColor: rgbaFromHex(color, 0.4),
+        background: rgbaFromHex(color, 0.12),
+      }}
+    >
+      {show ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={url}
+          alt=""
+          onError={() => setFailed(true)}
+          className="h-full w-full object-contain p-1"
+        />
+      ) : (
+        <span className="text-base font-black" style={{ color }}>
+          {fallbackNumber}
+        </span>
+      )}
+    </div>
   );
 }
 

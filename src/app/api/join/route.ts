@@ -55,6 +55,7 @@ export async function POST(request: Request) {
       teamNumber: team.teamNumber,
       label: teamLabel(team),
       color: team.color,
+      logoUrl: team.logoUrl,
       members: team.members.map((m) => ({ id: m.id, name: m.name })),
     },
   });
