@@ -538,10 +538,10 @@ export default function AdminPanel({
         <Section title="Team names & logos">
           <p className="mb-4 text-sm text-white/60">
             Give teams their own name and logo to show in the draw and on the
-            boards. Leave the name blank to keep the default — that team stays{" "}
+            boards. Leave the name blank to keep the default, so that team stays{" "}
             <span className="font-semibold">Team {`{number}`}</span>. You can mix
             both: name some, leave others default. The logo is optional; paste a
-            direct image link (PNG works well) — e.g. an ImgBB link, or a Google
+            direct image link (PNG works well), e.g. an ImgBB link, or a Google
             Drive link that opens the image itself, not the share page.
           </p>
 
@@ -834,7 +834,7 @@ export default function AdminPanel({
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="font-semibold">
-                  {held ? "On — participants are holding" : "Off — live"}
+                  {held ? "On · participants are holding" : "Off · live"}
                 </p>
                 <p className="text-sm text-white/50">
                   {held

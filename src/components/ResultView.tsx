@@ -93,7 +93,7 @@ export default function ResultView({ initial }: { initial: ResultData }) {
           </h1>
           <p className="mt-4 text-sm text-white/50">
             {data.held
-              ? "Finalising teams…"
+              ? "Loading team members…"
               : `${filled} of ${data.maxPerTeam} ${filled === 1 ? "player" : "players"}`}
             {!data.held && !data.isOpen && " · signups closed"}
           </p>
@@ -167,10 +167,10 @@ function HoldingScreen({
         style={{ borderTopColor: color }}
       />
       <p className="mt-6 text-lg font-semibold text-white/85">
-        Putting the finishing touches on the teams…
+        Loading team members…
       </p>
       <p className="mt-2 text-sm text-white/45">
-        Hang tight — your full roster will appear in a moment.
+        Hang tight, your full roster will appear in a moment.
       </p>
     </section>
   );
