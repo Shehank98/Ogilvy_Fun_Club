@@ -78,6 +78,17 @@ export default function RevealSequence({
     return () => window.clearTimeout(timer);
   }, [step, advance]);
 
+  // Warm the logo into the browser cache the moment the sequence starts, so it
+  // is already decoded by the time the team is revealed several seconds later —
+  // otherwise a large or slow-hosted PNG (common on some CDNs and in Edge) can
+  // still be loading during its big moment.
+  useEffect(() => {
+    if (!team.logoUrl) return;
+    const img = new window.Image();
+    img.decoding = "async";
+    img.src = team.logoUrl;
+  }, [team.logoUrl]);
+
   const revealed = step?.kind === "reveal" || step?.kind === "roster";
 
   // Neutral until the team is out, then the whole screen takes the team colour.
@@ -251,7 +262,7 @@ function TeamRevealStep({ team, reducedMotion }: { team: RevealTeam; reducedMoti
                 ease: "easeInOut",
                 delay: 0.3,
               }}
-              className="pointer-events-none absolute left-1/2 top-1/2 h-52 w-52 -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl"
+              className="pointer-events-none absolute left-1/2 top-1/2 h-40 w-40 -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl sm:h-56 sm:w-56"
               style={{ background: rgbaFromHex(team.color, 0.7) }}
             />
           )}
@@ -271,7 +282,7 @@ function TeamRevealStep({ team, reducedMotion }: { team: RevealTeam; reducedMoti
             }
             className="relative overflow-hidden rounded-2xl"
           >
-            <TeamLogo url={team.logoUrl} color={team.color} size={152} />
+            <TeamLogo url={team.logoUrl} color={team.color} />
             {!reducedMotion && (
               <motion.div
                 aria-hidden
@@ -297,7 +308,7 @@ function TeamRevealStep({ team, reducedMotion }: { team: RevealTeam; reducedMoti
             ? { duration: 0 }
             : { type: "spring", stiffness: 130, damping: 15, mass: 1.1, delay: 0.35 }
         }
-        className="text-6xl font-black leading-none drop-shadow-[0_0_40px_rgba(0,0,0,0.45)] sm:text-8xl"
+        className="text-balance break-words px-2 text-5xl font-black leading-[1.05] drop-shadow-[0_0_40px_rgba(0,0,0,0.45)] sm:text-7xl md:text-8xl"
         style={{ color: team.color }}
       >
         {team.label}!
@@ -312,33 +323,37 @@ function TeamRevealStep({ team, reducedMotion }: { team: RevealTeam; reducedMoti
  * still reads on the dark background. `onError` hides a broken URL so a bad or
  * non-direct link (a Google Drive share page, say) never leaves an empty box.
  */
-function TeamLogo({
-  url,
-  color,
-  size,
-}: {
-  url: string;
-  color: string;
-  size: number;
-}) {
+function TeamLogo({ url, color }: { url: string; color: string }) {
   const [failed, setFailed] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   if (failed) return null;
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={url}
-      alt=""
-      width={size}
-      height={size}
-      onError={() => setFailed(true)}
-      className="rounded-2xl border object-contain p-2"
+    <div
+      className="relative h-28 w-28 rounded-2xl border sm:h-36 sm:w-36"
       style={{
-        width: size,
-        height: size,
         borderColor: rgbaFromHex(color, 0.5),
         background: rgbaFromHex(color, 0.14),
       }}
-    />
+    >
+      {/* Pulsing placeholder until the image decodes, so a slow logo reads as
+          "loading" rather than a blank hole during the reveal. */}
+      {!loaded && (
+        <div
+          className="absolute inset-0 animate-pulse rounded-2xl"
+          style={{ background: rgbaFromHex(color, 0.2) }}
+        />
+      )}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={url}
+        alt=""
+        decoding="async"
+        onLoad={() => setLoaded(true)}
+        onError={() => setFailed(true)}
+        className="absolute inset-0 h-full w-full rounded-2xl object-contain p-2 transition-opacity duration-500"
+        style={{ opacity: loaded ? 1 : 0 }}
+      />
+    </div>
   );
 }
 
