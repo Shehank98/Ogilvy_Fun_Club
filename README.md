@@ -194,5 +194,3 @@ teams being dropped still have members, rather than silently deleting people.
 - Animations use only `transform` and `opacity` so they stay on the compositor.
 - `canvas-confetti` is dynamically imported on the reveal step, keeping it out
   of the initial bundle.
-- Sound is off by default and synthesised with WebAudio — no audio assets to
-  download — with a mute toggle on the join page.

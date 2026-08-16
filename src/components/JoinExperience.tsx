@@ -4,11 +4,9 @@ import { motion, useReducedMotion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import RevealSequence, { type RevealTeam } from "./RevealSequence";
-import SoundToggle from "./SoundToggle";
 import Backdrop from "./Backdrop";
 import type { PublicEvent } from "@/lib/event";
 import { MAX_EMAIL_LENGTH } from "@/lib/assignment";
-import { playPop } from "@/lib/sound";
 
 type Props = {
   event: PublicEvent;
@@ -47,7 +45,6 @@ export default function JoinExperience({ event, teamColors, spotsLeft, hasTeams 
 
     setStatus("joining");
     setError(null);
-    playPop();
 
     try {
       const response = await fetch("/api/join", {
@@ -100,10 +97,6 @@ export default function JoinExperience({ event, teamColors, spotsLeft, hasTeams 
   return (
     <main className="relative flex min-h-dvh flex-col items-center justify-center px-6 py-10">
       <Backdrop />
-
-      <div className="safe-top absolute right-4 top-0">
-        <SoundToggle />
-      </div>
 
       <motion.div
         initial={reducedMotion ? false : { opacity: 0, scale: 0.92 }}

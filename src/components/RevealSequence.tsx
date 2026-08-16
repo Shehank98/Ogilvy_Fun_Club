@@ -5,12 +5,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ROSTER_STAGGER_MS,
   buildRevealSteps,
-  skipTargetIndex,
   type RevealStep,
 } from "@/lib/reveal-steps";
 import type { PublicEvent } from "@/lib/event";
 import { rgbaFromHex } from "@/lib/colors";
-import { playChime } from "@/lib/sound";
 
 export type RevealTeam = {
   teamNumber: number;
@@ -80,14 +78,7 @@ export default function RevealSequence({
     return () => window.clearTimeout(timer);
   }, [step, advance]);
 
-  const skip = useCallback(() => {
-    const target = skipTargetIndex(steps);
-    // Still in the intro copy: jump to the draw. Past it: end the sequence.
-    setIndex((current) => (current < target ? target : steps.length));
-  }, [steps]);
-
   const revealed = step?.kind === "reveal" || step?.kind === "roster";
-  const stillIntro = index < skipTargetIndex(steps);
 
   // Neutral until the team is out, then the whole screen takes the team colour.
   const background = revealed
@@ -108,14 +99,6 @@ export default function RevealSequence({
       aria-modal="true"
       aria-label="Team reveal"
     >
-      {/* The whole surface is tappable to skip; the visible pill is the affordance. */}
-      <button
-        type="button"
-        onClick={skip}
-        className="absolute inset-0 h-full w-full cursor-pointer"
-        aria-label={stillIntro ? "Skip intro" : "Skip to my team page"}
-      />
-
       <div className="pointer-events-none relative flex flex-1 items-center justify-center px-6 py-20">
         <AnimatePresence mode="wait">
           <motion.div
@@ -141,9 +124,6 @@ export default function RevealSequence({
       </div>
 
       <div className="safe-bottom pointer-events-none relative flex flex-col items-center gap-4 px-6">
-        <span className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs uppercase tracking-widest text-white/60 backdrop-blur">
-          {stillIntro ? "Tap to skip intro" : "Tap to continue"}
-        </span>
         <StepProgress
           count={steps.length}
           index={index}
@@ -222,7 +202,6 @@ function ShuffleStep({ colors, reducedMotion }: { colors: string[]; reducedMotio
 
 function TeamRevealStep({ team, reducedMotion }: { team: RevealTeam; reducedMotion: boolean }) {
   useEffect(() => {
-    playChime();
     if (reducedMotion) return;
 
     let cancelled = false;

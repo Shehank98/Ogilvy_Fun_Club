@@ -28,7 +28,7 @@ export type RevealStep =
  */
 export const STEP_DURATIONS = {
   intro: 2800,
-  detail: 2400,
+  detail: 4400,
   shuffle: 2200,
   reveal: 3200,
   /** Time held after the last teammate has animated in. */
@@ -96,10 +96,4 @@ export function buildRevealSteps(
   });
 
   return steps;
-}
-
-/** Index of the first non-informational step — where "skip intro" lands. */
-export function skipTargetIndex(steps: RevealStep[]): number {
-  const index = steps.findIndex((step) => step.kind !== "info");
-  return index === -1 ? steps.length - 1 : index;
 }

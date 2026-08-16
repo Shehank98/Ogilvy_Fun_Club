@@ -4,7 +4,6 @@ import {
   ROSTER_STAGGER_MS,
   STEP_DURATIONS,
   buildRevealSteps,
-  skipTargetIndex,
 } from "../reveal-steps";
 
 const fullEvent = {
@@ -58,7 +57,7 @@ describe("buildRevealSteps", () => {
     expect(ids).toEqual(["shuffle", "reveal", "roster"]);
   });
 
-  it("gives the intro more time on screen than the details", () => {
+  it("uses the configured intro and detail durations", () => {
     const steps = buildRevealSteps(fullEvent);
     const intro = steps.find((s) => s.id === "intro")!;
     const venue = steps.find((s) => s.id === "venue")!;
@@ -100,23 +99,5 @@ describe("buildRevealSteps", () => {
     const steps = buildRevealSteps({ ...fullEvent, venue: "  The Basement Bar \n" });
     const venue = steps.find((s) => s.id === "venue")!;
     expect(venue.kind === "info" && venue.value).toBe("The Basement Bar");
-  });
-});
-
-describe("skipTargetIndex", () => {
-  it("lands on the shuffle step so nobody skips past their team", () => {
-    const steps = buildRevealSteps(fullEvent);
-    expect(steps[skipTargetIndex(steps)].kind).toBe("shuffle");
-  });
-
-  it("is the first step when there is no intro content at all", () => {
-    const steps = buildRevealSteps({
-      introMessage: "",
-      date: "",
-      time: "",
-      venue: "",
-      notes: "",
-    });
-    expect(skipTargetIndex(steps)).toBe(0);
   });
 });
