@@ -23,6 +23,7 @@ export default async function AdminPage() {
       initialInvitees={invitees}
       initialAssignPointer={event.assignPointer}
       isOwner={isOwner}
+      initialHeld={event.revealHeld}
     />
   );
 }

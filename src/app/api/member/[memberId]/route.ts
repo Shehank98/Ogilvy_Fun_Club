@@ -17,7 +17,9 @@ export async function GET(
       team: {
         include: {
           members: { orderBy: { joinedAt: "asc" } },
-          event: { select: { maxPerTeam: true, title: true, isOpen: true } },
+          event: {
+            select: { maxPerTeam: true, title: true, isOpen: true, revealHeld: true },
+          },
         },
       },
     },
@@ -26,19 +28,29 @@ export async function GET(
   if (!member) return fail("We couldn't find that spot.", 404);
 
   const { team } = member;
+  const held = team.event.revealHeld;
+
+  // While the owner is finalising teams, don't stream the live roster: the
+  // participant page shows a holding screen, and we withhold the churning
+  // member list so it can't be read off the network either.
+  const members = held
+    ? [{ id: member.id, name: member.name }]
+    : team.members.map((m) => ({ id: m.id, name: m.name }));
+
   return ok({
     memberId: member.id,
     memberName: member.name,
     eventTitle: team.event.title,
     isOpen: team.event.isOpen,
     maxPerTeam: team.event.maxPerTeam,
+    held,
     team: {
       id: team.id,
       teamNumber: team.teamNumber,
       label: teamLabel(team),
       color: team.color,
       logoUrl: team.logoUrl,
-      members: team.members.map((m) => ({ id: m.id, name: m.name })),
+      members,
     },
   });
 }

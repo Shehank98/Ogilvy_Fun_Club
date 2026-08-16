@@ -12,6 +12,8 @@ export type ResultData = {
   eventTitle: string;
   isOpen: boolean;
   maxPerTeam: number;
+  /** Owner is finalising teams — show a holding screen, not the live roster. */
+  held?: boolean;
   team: {
     id: string;
     teamNumber: number;
@@ -90,51 +92,87 @@ export default function ResultView({ initial }: { initial: ResultData }) {
             {team.label}
           </h1>
           <p className="mt-4 text-sm text-white/50">
-            {filled} of {data.maxPerTeam} {filled === 1 ? "player" : "players"}
-            {!data.isOpen && " · signups closed"}
+            {data.held
+              ? "Finalising teams…"
+              : `${filled} of ${data.maxPerTeam} ${filled === 1 ? "player" : "players"}`}
+            {!data.held && !data.isOpen && " · signups closed"}
           </p>
         </header>
 
-        <section className="mt-10">
-          <h2 className="mb-4 text-center text-xs font-semibold uppercase tracking-[0.25em] text-white/40">
-            Roster
-          </h2>
-          <ul className="flex flex-col gap-3">
-            <AnimatePresence initial={false}>
-              {team.members.map((member) => (
-                <motion.li
-                  key={member.id}
-                  layout={!reducedMotion}
-                  initial={reducedMotion ? false : { opacity: 0, x: 28 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={reducedMotion ? { opacity: 0 } : { opacity: 0, x: -28 }}
-                  transition={reducedMotion ? { duration: 0 } : { duration: 0.4, ease: "easeOut" }}
-                  className="flex items-center justify-between rounded-2xl border px-5 py-4 text-lg font-semibold text-white backdrop-blur"
-                  style={{
-                    borderColor: rgbaFromHex(team.color, 0.45),
-                    background: rgbaFromHex(team.color, 0.14),
-                  }}
-                >
-                  <span>{member.name}</span>
-                  {member.id === data.memberId && (
-                    <span className="text-xs uppercase tracking-widest text-white/55">
-                      you
-                    </span>
-                  )}
-                </motion.li>
-              ))}
-            </AnimatePresence>
-          </ul>
+        {data.held ? (
+          <HoldingScreen color={team.color} reducedMotion={reducedMotion} />
+        ) : (
+          <section className="mt-10">
+            <h2 className="mb-4 text-center text-xs font-semibold uppercase tracking-[0.25em] text-white/40">
+              Roster
+            </h2>
+            <ul className="flex flex-col gap-3">
+              <AnimatePresence initial={false}>
+                {team.members.map((member) => (
+                  <motion.li
+                    key={member.id}
+                    layout={!reducedMotion}
+                    initial={reducedMotion ? false : { opacity: 0, x: 28 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={reducedMotion ? { opacity: 0 } : { opacity: 0, x: -28 }}
+                    transition={reducedMotion ? { duration: 0 } : { duration: 0.4, ease: "easeOut" }}
+                    className="flex items-center justify-between rounded-2xl border px-5 py-4 text-lg font-semibold text-white backdrop-blur"
+                    style={{
+                      borderColor: rgbaFromHex(team.color, 0.45),
+                      background: rgbaFromHex(team.color, 0.14),
+                    }}
+                  >
+                    <span>{member.name}</span>
+                    {member.id === data.memberId && (
+                      <span className="text-xs uppercase tracking-widest text-white/55">
+                        you
+                      </span>
+                    )}
+                  </motion.li>
+                ))}
+              </AnimatePresence>
+            </ul>
 
-          {data.isOpen && filled < data.maxPerTeam && (
-            <p className="mt-6 text-center text-sm text-white/45">
-              Waiting on {data.maxPerTeam - filled} more…
-            </p>
-          )}
-        </section>
+            {data.isOpen && filled < data.maxPerTeam && (
+              <p className="mt-6 text-center text-sm text-white/45">
+                Waiting on {data.maxPerTeam - filled} more…
+              </p>
+            )}
+          </section>
+        )}
 
       </div>
     </main>
+  );
+}
+
+/**
+ * Shown while the organiser is finalising teams. Keeps the roster off-screen —
+ * with a calm "putting the finishing touches" message — so mid-finalise changes
+ * aren't watched live.
+ */
+function HoldingScreen({
+  color,
+  reducedMotion,
+}: {
+  color: string;
+  reducedMotion: boolean;
+}) {
+  return (
+    <section className="mt-12 flex flex-col items-center text-center">
+      <motion.div
+        animate={reducedMotion ? {} : { rotate: 360 }}
+        transition={{ duration: 1.6, repeat: Infinity, ease: "linear" }}
+        className="h-14 w-14 rounded-full border-4 border-white/10"
+        style={{ borderTopColor: color }}
+      />
+      <p className="mt-6 text-lg font-semibold text-white/85">
+        Putting the finishing touches on the teams…
+      </p>
+      <p className="mt-2 text-sm text-white/45">
+        Hang tight — your full roster will appear in a moment.
+      </p>
+    </section>
   );
 }
 

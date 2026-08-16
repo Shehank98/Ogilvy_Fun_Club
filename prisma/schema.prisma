@@ -19,6 +19,9 @@ model Event {
   numTeams      Int      @default(4)
   maxPerTeam    Int      @default(5)
   isOpen        Boolean  @default(true)
+  /// Owner "finalize" hold: while true, participants see a holding screen
+  /// instead of their live roster, so team arranging isn't watched in real time.
+  revealHeld    Boolean  @default(false)
   /// Round-robin cursor: index (0-based) of the team to try first on the next join.
   assignPointer Int      @default(0)
   createdAt     DateTime @default(now())

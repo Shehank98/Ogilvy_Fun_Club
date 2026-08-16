@@ -18,7 +18,9 @@ export default async function ResultPage({
       team: {
         include: {
           members: { orderBy: { joinedAt: "asc" } },
-          event: { select: { title: true, isOpen: true, maxPerTeam: true } },
+          event: {
+            select: { title: true, isOpen: true, maxPerTeam: true, revealHeld: true },
+          },
         },
       },
     },
@@ -27,6 +29,7 @@ export default async function ResultPage({
   if (!member) return <MissingMember />;
 
   const { team } = member;
+  const held = team.event.revealHeld;
 
   return (
     <ResultView
@@ -36,13 +39,16 @@ export default async function ResultPage({
         eventTitle: team.event.title,
         isOpen: team.event.isOpen,
         maxPerTeam: team.event.maxPerTeam,
+        held,
         team: {
           id: team.id,
           teamNumber: team.teamNumber,
           label: teamLabel(team),
           color: team.color,
           logoUrl: team.logoUrl,
-          members: team.members.map((m) => ({ id: m.id, name: m.name })),
+          members: held
+            ? [{ id: member.id, name: member.name }]
+            : team.members.map((m) => ({ id: m.id, name: m.name })),
         },
       }}
     />

@@ -13,8 +13,10 @@ type Props = {
   initialTeams: PublicTeam[];
   initialInvitees: PublicInvitee[];
   initialAssignPointer: number;
-  /** Owner tier: unlocks hidden controls (moving people between teams). */
+  /** Owner tier: unlocks hidden controls (moving people, finalise hold). */
   isOwner: boolean;
+  /** Owner tier: whether the participant view is currently held. */
+  initialHeld: boolean;
 };
 
 type Toast = { tone: "ok" | "error"; text: string } | null;
@@ -25,10 +27,12 @@ export default function AdminPanel({
   initialInvitees,
   initialAssignPointer,
   isOwner,
+  initialHeld,
 }: Props) {
   const router = useRouter();
   const [event, setEvent] = useState(initialEvent);
   const [pointer, setPointer] = useState(initialAssignPointer);
+  const [held, setHeld] = useState(initialHeld);
   const [teams, setTeams] = useState(initialTeams);
   const [nameDrafts, setNameDrafts] = useState<Record<string, string>>(() =>
     Object.fromEntries(initialTeams.map((t) => [t.id, t.name ?? ""]))
@@ -261,6 +265,33 @@ export default function AdminPanel({
       applyTeams(payload.teams);
       if (payload.invitees) setInvitees(payload.invitees);
       announce("ok", "Moved.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Owner-only: hold or publish the participant view while arranging teams.
+  async function toggleHold() {
+    const next = !held;
+    setBusy(true);
+    try {
+      const response = await fetch("/api/admin/hold", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ held: next }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        announce("error", payload?.error ?? "Could not update.");
+        return;
+      }
+      setHeld(next);
+      announce(
+        "ok",
+        next
+          ? "Finalise mode on. Everyone sees a holding screen."
+          : "Published. Everyone sees their final roster now."
+      );
     } finally {
       setBusy(false);
     }
@@ -797,6 +828,39 @@ export default function AdminPanel({
             )}
           </div>
         </Section>
+
+        {isOwner && (
+          <Section title="Finalise mode">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="font-semibold">
+                  {held ? "On — participants are holding" : "Off — live"}
+                </p>
+                <p className="text-sm text-white/50">
+                  {held
+                    ? "Everyone sees a “finalising teams…” screen. Arrange people below, then publish."
+                    : "Turn on to freeze what participants see while you arrange teams, then publish to reveal the final rosters at once."}
+                </p>
+              </div>
+              <button
+                onClick={toggleHold}
+                disabled={busy}
+                role="switch"
+                aria-checked={held}
+                aria-label="Finalise mode"
+                className={`relative h-8 w-14 shrink-0 rounded-full transition ${
+                  held ? "bg-amber-500" : "bg-slate-600"
+                } disabled:opacity-50`}
+              >
+                <span
+                  className={`absolute top-1 h-6 w-6 rounded-full bg-white transition-all ${
+                    held ? "left-7" : "left-1"
+                  }`}
+                />
+              </button>
+            </div>
+          </Section>
+        )}
 
         <Section title="Roster">
           {teams.length === 0 ? (
