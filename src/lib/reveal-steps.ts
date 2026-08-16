@@ -30,7 +30,7 @@ export const STEP_DURATIONS = {
   intro: 2800,
   detail: 4400,
   shuffle: 2200,
-  reveal: 3200,
+  reveal: 5200,
   /** Time held after the last teammate has animated in. */
   rosterOutro: 2200,
 } as const;
