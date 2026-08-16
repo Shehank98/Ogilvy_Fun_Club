@@ -96,20 +96,6 @@ export default function RevealSequence({
 
   const revealed = step?.kind === "reveal" || step?.kind === "roster";
 
-  // The event-detail cards (Date, Time, Venue, …) drive a small itinerary rail.
-  // The intro message is emphasis copy, not part of the itinerary.
-  const detailSteps = useMemo(
-    () => steps.filter((s) => s.kind === "info" && !s.emphasis),
-    [steps]
-  );
-  const detailProgress =
-    step?.kind === "info" && !step.emphasis
-      ? {
-          index: detailSteps.findIndex((s) => s.id === step.id),
-          total: detailSteps.length,
-        }
-      : undefined;
-
   // Impact shake fired when the team lands, for a physical "it hit" feel.
   const shakeControls = useAnimationControls();
   useEffect(() => {
@@ -170,11 +156,7 @@ export default function RevealSequence({
             className="w-full max-w-2xl text-center"
           >
             {step?.kind === "info" && (
-              <InfoStep
-                step={step}
-                reducedMotion={reducedMotion}
-                detailProgress={detailProgress}
-              />
+              <InfoStep step={step} reducedMotion={reducedMotion} />
             )}
             {step?.kind === "shuffle" && (
               <ShuffleStep
@@ -218,21 +200,12 @@ export default function RevealSequence({
 function InfoStep({
   step,
   reducedMotion,
-  detailProgress,
 }: {
   step: RevealStep & { kind: "info" };
   reducedMotion: boolean;
-  detailProgress?: { index: number; total: number };
 }) {
   return (
     <div className="space-y-4">
-      {detailProgress && detailProgress.total > 1 && (
-        <ItineraryRail
-          index={detailProgress.index}
-          total={detailProgress.total}
-          reducedMotion={reducedMotion}
-        />
-      )}
       {step.label && (
         <motion.p
           initial={reducedMotion ? false : { opacity: 0 }}
@@ -243,6 +216,24 @@ function InfoStep({
           {step.label}
         </motion.p>
       )}
+      {/* A thin accent line strokes itself in between the label and the value. */}
+      {!step.emphasis && (
+        <motion.div
+          aria-hidden
+          initial={reducedMotion ? false : { scaleX: 0, opacity: 0 }}
+          animate={{ scaleX: 1, opacity: 1 }}
+          transition={{
+            duration: reducedMotion ? 0 : 0.7,
+            delay: reducedMotion ? 0 : 0.28,
+            ease: [0.16, 1, 0.3, 1],
+          }}
+          className="mx-auto h-px w-16 origin-left sm:w-24"
+          style={{
+            background:
+              "linear-gradient(90deg, transparent, rgba(255,255,255,0.7), transparent)",
+          }}
+        />
+      )}
       <p
         className={
           step.emphasis
@@ -252,57 +243,6 @@ function InfoStep({
       >
         {step.value}
       </p>
-    </div>
-  );
-}
-
-/**
- * A small itinerary rail — dots connected by a line — that advances through the
- * event-detail cards (Date -> Time -> Venue -> …). Deliberately cool and
- * neutral: the full team colour is saved for the reveal, so the setup feels
- * like a build-up rather than competing with the payoff.
- */
-function ItineraryRail({
-  index,
-  total,
-  reducedMotion,
-}: {
-  index: number;
-  total: number;
-  reducedMotion: boolean;
-}) {
-  return (
-    <div aria-hidden className="mx-auto mb-6 flex items-center justify-center">
-      {Array.from({ length: total }, (_, i) => (
-        <div key={i} className="flex items-center">
-          {i > 0 && (
-            <span
-              className="h-px w-6 sm:w-8"
-              style={{
-                background:
-                  i <= index ? "rgba(226,232,240,0.7)" : "rgba(100,116,139,0.35)",
-              }}
-            />
-          )}
-          <motion.span
-            initial={false}
-            animate={{
-              scale: i === index ? 1.35 : 1,
-              opacity: i <= index ? 1 : 0.4,
-            }}
-            transition={{ duration: reducedMotion ? 0 : 0.35 }}
-            className="h-2 w-2 rounded-full"
-            style={{
-              background:
-                i === index
-                  ? "#e2e8f0"
-                  : i < index
-                    ? "rgba(226,232,240,0.75)"
-                    : "#64748b",
-            }}
-          />
-        </div>
-      ))}
     </div>
   );
 }
