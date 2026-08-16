@@ -227,31 +227,75 @@ function TeamRevealStep({ team, reducedMotion }: { team: RevealTeam; reducedMoti
   }, [team.color, reducedMotion]);
 
   return (
-    <div className="space-y-4">
-      <p className="text-xl font-medium uppercase tracking-[0.3em] text-white/60">
+    <div className="space-y-6">
+      <motion.p
+        initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: reducedMotion ? 0 : 0.5 }}
+        className="text-xl font-medium uppercase tracking-[0.3em] text-white/60"
+      >
         You&rsquo;re on
-      </p>
+      </motion.p>
+
       {team.logoUrl && (
-        <motion.div
-          initial={reducedMotion ? false : { scale: 0.5, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={
-            reducedMotion
-              ? { duration: 0 }
-              : { type: "spring", stiffness: 170, damping: 15, delay: 0.05 }
-          }
-          className="flex justify-center"
-        >
-          <TeamLogo url={team.logoUrl} color={team.color} size={144} />
-        </motion.div>
+        <div className="relative flex justify-center">
+          {/* Pulsing glow halo in the team colour, lingering behind the logo. */}
+          {!reducedMotion && (
+            <motion.div
+              aria-hidden
+              initial={{ opacity: 0, scale: 0.6 }}
+              animate={{ opacity: [0.35, 0.7, 0.35], scale: [1, 1.18, 1] }}
+              transition={{
+                duration: 2.4,
+                repeat: Infinity,
+                ease: "easeInOut",
+                delay: 0.3,
+              }}
+              className="pointer-events-none absolute left-1/2 top-1/2 h-52 w-52 -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl"
+              style={{ background: rgbaFromHex(team.color, 0.7) }}
+            />
+          )}
+
+          {/* Logo blooms up out of the dark, with a one-time light sweep. */}
+          <motion.div
+            initial={
+              reducedMotion
+                ? false
+                : { scale: 0.3, opacity: 0, filter: "brightness(0.2)" }
+            }
+            animate={{ scale: 1, opacity: 1, filter: "brightness(1)" }}
+            transition={
+              reducedMotion
+                ? { duration: 0 }
+                : { type: "spring", stiffness: 140, damping: 13, mass: 1 }
+            }
+            className="relative overflow-hidden rounded-2xl"
+          >
+            <TeamLogo url={team.logoUrl} color={team.color} size={152} />
+            {!reducedMotion && (
+              <motion.div
+                aria-hidden
+                initial={{ x: "-160%" }}
+                animate={{ x: "160%" }}
+                transition={{ duration: 0.9, delay: 0.5, ease: "easeInOut" }}
+                className="pointer-events-none absolute inset-y-0 w-1/2 -skew-x-12"
+                style={{
+                  background:
+                    "linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent)",
+                }}
+              />
+            )}
+          </motion.div>
+        </div>
       )}
+
       <motion.h1
-        initial={reducedMotion ? false : { scale: 0.4, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
+        initial={reducedMotion ? false : { y: 46, opacity: 0, scale: 0.9 }}
+        animate={{ y: 0, opacity: 1, scale: 1 }}
         transition={
           reducedMotion
             ? { duration: 0 }
-            : { type: "spring", stiffness: 150, damping: 14, mass: 1.1 }
+            : { type: "spring", stiffness: 130, damping: 15, mass: 1.1, delay: 0.35 }
         }
         className="text-6xl font-black leading-none drop-shadow-[0_0_40px_rgba(0,0,0,0.45)] sm:text-8xl"
         style={{ color: team.color }}
