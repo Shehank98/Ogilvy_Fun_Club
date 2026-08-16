@@ -18,7 +18,16 @@ export async function GET(
         include: {
           members: { orderBy: { joinedAt: "asc" } },
           event: {
-            select: { maxPerTeam: true, title: true, isOpen: true, revealHeld: true },
+            select: {
+              maxPerTeam: true,
+              title: true,
+              isOpen: true,
+              revealHeld: true,
+              date: true,
+              time: true,
+              venue: true,
+              notes: true,
+            },
           },
         },
       },
@@ -44,6 +53,12 @@ export async function GET(
     isOpen: team.event.isOpen,
     maxPerTeam: team.event.maxPerTeam,
     held,
+    briefing: {
+      date: team.event.date,
+      time: team.event.time,
+      venue: team.event.venue,
+      notes: team.event.notes,
+    },
     team: {
       id: team.id,
       teamNumber: team.teamNumber,

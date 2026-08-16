@@ -19,7 +19,16 @@ export default async function ResultPage({
         include: {
           members: { orderBy: { joinedAt: "asc" } },
           event: {
-            select: { title: true, isOpen: true, maxPerTeam: true, revealHeld: true },
+            select: {
+              title: true,
+              isOpen: true,
+              maxPerTeam: true,
+              revealHeld: true,
+              date: true,
+              time: true,
+              venue: true,
+              notes: true,
+            },
           },
         },
       },
@@ -40,6 +49,12 @@ export default async function ResultPage({
         isOpen: team.event.isOpen,
         maxPerTeam: team.event.maxPerTeam,
         held,
+        briefing: {
+          date: team.event.date,
+          time: team.event.time,
+          venue: team.event.venue,
+          notes: team.event.notes,
+        },
         team: {
           id: team.id,
           teamNumber: team.teamNumber,

@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { rgbaFromHex } from "@/lib/colors";
 
 type RosterMember = { id: string; name: string };
@@ -14,6 +14,8 @@ export type ResultData = {
   maxPerTeam: number;
   /** Owner is finalising teams — show a holding screen, not the live roster. */
   held?: boolean;
+  /** Event details, cycled on the holding screen so the wait feels intentional. */
+  briefing?: { date: string; time: string; venue: string; notes: string };
   team: {
     id: string;
     teamNumber: number;
@@ -100,7 +102,11 @@ export default function ResultView({ initial }: { initial: ResultData }) {
         </header>
 
         {data.held ? (
-          <HoldingScreen color={team.color} reducedMotion={reducedMotion} />
+          <HoldingScreen
+            color={team.color}
+            reducedMotion={reducedMotion}
+            briefing={data.briefing}
+          />
         ) : (
           <section className="mt-10">
             <h2 className="mb-4 text-center text-xs font-semibold uppercase tracking-[0.25em] text-white/40">
@@ -147,31 +153,77 @@ export default function ResultView({ initial }: { initial: ResultData }) {
 }
 
 /**
- * Shown while the organiser is finalising teams. Keeps the roster off-screen —
- * with a calm "putting the finishing touches" message — so mid-finalise changes
- * aren't watched live.
+ * Shown while the organiser is finalising teams. Keeps the roster off-screen so
+ * mid-finalise changes aren't watched live, and fills the wait by cycling the
+ * event briefing (when, time, where, notes) with a few playful prep lines, so
+ * it reads as an intentional "here's the plan" beat rather than a stall.
  */
 function HoldingScreen({
   color,
   reducedMotion,
+  briefing,
 }: {
   color: string;
   reducedMotion: boolean;
+  briefing?: { date: string; time: string; venue: string; notes: string };
 }) {
+  const cards = useMemo(() => {
+    const list: { label?: string; value: string }[] = [];
+    const b = briefing;
+    if (b?.date.trim()) list.push({ label: "When", value: b.date.trim() });
+    if (b?.time.trim()) list.push({ label: "Start time", value: b.time.trim() });
+    if (b?.venue.trim()) list.push({ label: "Where", value: b.venue.trim() });
+    if (b?.notes.trim()) list.push({ label: "Good to know", value: b.notes.trim() });
+    // Always-present prep lines, so the carousel keeps moving even with no
+    // details entered, and the wait stays lively.
+    list.push({ value: "Chalking the cues…" });
+    list.push({ value: "Sorting out the teams…" });
+    list.push({ value: "Almost ready…" });
+    return list;
+  }, [briefing]);
+
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    if (reducedMotion || cards.length <= 1) return;
+    const timer = window.setInterval(
+      () => setI((x) => (x + 1) % cards.length),
+      3400
+    );
+    return () => window.clearInterval(timer);
+  }, [reducedMotion, cards.length]);
+
+  const card = cards[i % cards.length];
+
   return (
     <section className="mt-12 flex flex-col items-center text-center">
       <motion.div
         animate={reducedMotion ? {} : { rotate: 360 }}
         transition={{ duration: 1.6, repeat: Infinity, ease: "linear" }}
-        className="h-14 w-14 rounded-full border-4 border-white/10"
+        className="h-12 w-12 rounded-full border-4 border-white/10"
         style={{ borderTopColor: color }}
       />
-      <p className="mt-6 text-lg font-semibold text-white/85">
-        Loading team members…
-      </p>
-      <p className="mt-2 text-sm text-white/45">
-        Hang tight, your full roster will appear in a moment.
-      </p>
+
+      <div className="mt-8 flex min-h-[5.5rem] w-full items-center justify-center">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={i}
+            initial={reducedMotion ? false : { opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -12 }}
+            transition={{ duration: reducedMotion ? 0 : 0.5, ease: "easeOut" }}
+            className="px-4"
+          >
+            {card.label && (
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.3em] text-white/45">
+                {card.label}
+              </p>
+            )}
+            <p className="text-balance text-2xl font-bold leading-snug text-white sm:text-3xl">
+              {card.value}
+            </p>
+          </motion.div>
+        </AnimatePresence>
+      </div>
     </section>
   );
 }
