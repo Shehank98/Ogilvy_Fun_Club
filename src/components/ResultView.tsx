@@ -176,7 +176,6 @@ function HoldingScreen({
     if (b?.notes.trim()) list.push({ label: "Good to know", value: b.notes.trim() });
     // Always-present prep lines, so the carousel keeps moving even with no
     // details entered, and the wait stays lively.
-    list.push({ value: "Chalking the cues…" });
     list.push({ value: "Sorting out the teams…" });
     list.push({ value: "Almost ready…" });
     return list;
