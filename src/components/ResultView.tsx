@@ -85,17 +85,20 @@ export default function ResultView({ initial }: { initial: ResultData }) {
             {data.eventTitle}
           </p>
           <p className="mt-6 text-lg text-white/70">You&rsquo;re on</p>
-          {team.logoUrl && (
+          {team.logoUrl ? (
+            // The logo carries the team name, so it stands in for the text
+            // heading here rather than repeating it underneath.
             <div className="mt-3 flex justify-center">
               <TeamLogo url={team.logoUrl} color={team.color} scale={data.logoScale} />
             </div>
+          ) : (
+            <h1
+              className="mt-2 text-3xl font-black leading-tight sm:text-4xl"
+              style={{ color: team.color }}
+            >
+              {team.label}
+            </h1>
           )}
-          <h1
-            className="mt-2 text-3xl font-black leading-tight sm:text-4xl"
-            style={{ color: team.color }}
-          >
-            {team.label}
-          </h1>
           <p className="mt-4 text-sm text-white/50">
             {data.held
               ? "Loading team members…"
@@ -238,7 +241,7 @@ function HoldingScreen({
 function TeamLogo({ url, color, scale }: { url: string; color: string; scale: number }) {
   const [failed, setFailed] = useState(false);
   if (failed) return null;
-  const size = logoSizeCss(150, scale, "60vw");
+  const size = logoSizeCss(173, scale, "66vw");
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img

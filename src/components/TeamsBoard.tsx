@@ -231,7 +231,7 @@ function TeamCard({
 function TeamLogo({ url, color, scale }: { url: string; color: string; scale: number }) {
   const [failed, setFailed] = useState(false);
   if (failed) return null;
-  const size = logoSizeCss(36, scale, "20vw");
+  const size = logoSizeCss(41, scale, "22vw");
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img

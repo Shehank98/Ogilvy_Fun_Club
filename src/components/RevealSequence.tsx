@@ -450,19 +450,23 @@ function TeamRevealStep({
         </div>
       )}
 
-      <motion.h1
-        initial={reducedMotion ? false : { y: 46, opacity: 0, scale: 0.9 }}
-        animate={{ y: 0, opacity: 1, scale: 1 }}
-        transition={
-          reducedMotion
-            ? { duration: 0 }
-            : { type: "spring", stiffness: 130, damping: 15, mass: 1.1, delay: 0.35 }
-        }
-        className="text-balance break-words px-2 text-3xl font-black leading-[1.05] drop-shadow-[0_0_40px_rgba(0,0,0,0.45)] sm:text-4xl md:text-5xl"
-        style={{ color: team.color }}
-      >
-        {team.label}!
-      </motion.h1>
+      {/* The logo carries the team name, so the text heading only appears as a
+          fallback for a team that has no logo. */}
+      {!team.logoUrl && (
+        <motion.h1
+          initial={reducedMotion ? false : { y: 46, opacity: 0, scale: 0.9 }}
+          animate={{ y: 0, opacity: 1, scale: 1 }}
+          transition={
+            reducedMotion
+              ? { duration: 0 }
+              : { type: "spring", stiffness: 130, damping: 15, mass: 1.1, delay: 0.35 }
+          }
+          className="text-balance break-words px-2 text-3xl font-black leading-[1.05] drop-shadow-[0_0_40px_rgba(0,0,0,0.45)] sm:text-4xl md:text-5xl"
+          style={{ color: team.color }}
+        >
+          {team.label}!
+        </motion.h1>
+      )}
     </div>
   );
 }
@@ -477,7 +481,7 @@ function TeamLogo({ url, color, scale }: { url: string; color: string; scale: nu
   const [failed, setFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);
   if (failed) return null;
-  const size = logoSizeCss(208, scale, "72vw");
+  const size = logoSizeCss(239, scale, "78vw");
   return (
     <div
       className="relative rounded-2xl border"

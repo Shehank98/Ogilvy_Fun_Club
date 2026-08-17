@@ -114,7 +114,7 @@ export default function JoinExperience({ event, teamColors, spotsLeft, hasTeams 
             src={event.logoUrl}
             alt=""
             className="mb-4 w-auto max-w-[82vw] object-contain"
-            style={{ height: logoSizeCss(208, event.logoScale, "32vh") }}
+            style={{ height: logoSizeCss(239, event.logoScale, "36vh") }}
           />
         ) : (
           <div className="mb-4 grid h-36 w-36 place-items-center rounded-3xl border border-white/10 bg-white/5 text-6xl sm:h-44 sm:w-44">
