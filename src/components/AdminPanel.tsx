@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import type { PublicEvent, PublicTeam } from "@/lib/event";
 import type { PublicInvitee } from "@/lib/invitees";
 import { rgbaFromHex } from "@/lib/colors";
+import { dominantColorFromUrl } from "@/lib/dominant-color";
 import { selectTeam } from "@/lib/assignment";
 
 type Props = {
@@ -43,6 +44,9 @@ export default function AdminPanel({
   const [colorDrafts, setColorDrafts] = useState<Record<string, string>>(() =>
     Object.fromEntries(initialTeams.map((t) => [t.id, t.color]))
   );
+  // Which team's colour is currently being sampled from its logo, so only that
+  // row's button shows a spinner.
+  const [samplingTeamId, setSamplingTeamId] = useState<string | null>(null);
   const [invitees, setInvitees] = useState(initialInvitees);
   const [guestPaste, setGuestPaste] = useState("");
   const [guestErrors, setGuestErrors] = useState<string[]>([]);
@@ -183,6 +187,29 @@ export default function AdminPanel({
       announce("error", "Couldn't reach the server.");
     } finally {
       setBusy(false);
+    }
+  }
+
+  // Derive a team's colour from its logo. Reads the dominant colour off the
+  // current logo draft and drops it into the colour field, still unsaved, so the
+  // organiser can nudge or overwrite it before saving.
+  async function pickColorFromLogo(teamId: string) {
+    const url = (logoDrafts[teamId] ?? "").trim();
+    if (!url) {
+      announce("error", "Add a logo URL first, then pull its colour.");
+      return;
+    }
+    setSamplingTeamId(teamId);
+    try {
+      const color = await dominantColorFromUrl(url);
+      if (!color) {
+        announce("error", "Couldn't read a colour from that logo. Pick one by hand.");
+        return;
+      }
+      setColorDrafts((d) => ({ ...d, [teamId]: color }));
+      announce("ok", `Colour ${color} pulled from the logo. Save to apply.`);
+    } finally {
+      setSamplingTeamId(null);
     }
   }
 
@@ -557,9 +584,11 @@ export default function AdminPanel({
             Give teams their own name, colour and logo to show in the draw and on
             the boards. Leave the name blank to keep the default, so that team
             stays <span className="font-semibold">Team {`{number}`}</span>. You can
-            mix both: name some, leave others default. Pick a colour to match the
-            team&rsquo;s logo — it tints the reveal background, the boards and the
-            roster. The logo is optional; paste a direct image link (PNG works
+            mix both: name some, leave others default. The colour tints the
+            reveal background, the boards and the roster — hit{" "}
+            <span className="font-semibold">From logo</span> to pull the logo&rsquo;s
+            dominant colour automatically, or pick one by hand. The logo is
+            optional; paste a direct image link (PNG works
             well), e.g. an ImgBB link, or a Google Drive link that opens the image
             itself, not the share page.
           </p>
@@ -620,6 +649,9 @@ export default function AdminPanel({
                             onChange={(color) =>
                               setColorDrafts((d) => ({ ...d, [team.id]: color }))
                             }
+                            onPickFromLogo={() => pickColorFromLogo(team.id)}
+                            canPickFromLogo={(logoDrafts[team.id] ?? "").trim() !== ""}
+                            sampling={samplingTeamId === team.id}
                           />
                         </div>
                       </div>
@@ -1039,20 +1071,28 @@ function LogoPreview({
 }
 
 /**
- * A team colour picker: a native swatch for point-and-click plus a hex field for
- * pasting an exact brand colour (e.g. sampled from the team's logo). Both edit
- * the same value; the swatch only understands `#rrggbb`, so the text field is
- * the escape hatch for shorthand or uppercase input, normalised on save.
+ * A team colour picker with three ways in: a "From logo" button that pulls the
+ * logo's dominant colour, a native swatch for point-and-click, and a hex field
+ * for pasting an exact brand colour. The auto option is the quick default; the
+ * swatch and field stay available for picking or fine-tuning by hand. The swatch
+ * only understands `#rrggbb`, so the text field is the escape hatch for
+ * shorthand or uppercase input, normalised on save.
  */
 function ColorField({
   value,
   onChange,
+  onPickFromLogo,
+  canPickFromLogo,
+  sampling,
 }: {
   value: string;
   onChange: (value: string) => void;
+  onPickFromLogo: () => void;
+  canPickFromLogo: boolean;
+  sampling: boolean;
 }) {
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-2">
+    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
       <input
         type="color"
         value={/^#[0-9a-fA-F]{6}$/.test(value) ? value : "#000000"}
@@ -1066,8 +1106,21 @@ function ColorField({
         maxLength={7}
         spellCheck={false}
         onChange={(e) => onChange(e.target.value)}
-        className={`${fieldClass} font-mono text-sm uppercase`}
+        className={`${fieldClass} w-24 flex-1 font-mono text-sm uppercase`}
       />
+      <button
+        type="button"
+        onClick={onPickFromLogo}
+        disabled={sampling || !canPickFromLogo}
+        title={
+          canPickFromLogo
+            ? "Use the logo's dominant colour"
+            : "Add a logo URL to pull its colour"
+        }
+        className="shrink-0 rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-xs font-semibold text-white/70 transition active:scale-95 disabled:opacity-40"
+      >
+        {sampling ? "Reading…" : "From logo"}
+      </button>
     </div>
   );
 }
