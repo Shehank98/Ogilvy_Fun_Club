@@ -367,7 +367,7 @@ function TeamRevealStep({ team, reducedMotion }: { team: RevealTeam; reducedMoti
                 opacity: { duration: 0.9, delay: 0.15 },
                 rotate: { duration: 16, repeat: Infinity, ease: "linear" },
               }}
-              className="pointer-events-none absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 sm:h-96 sm:w-96"
+              className="pointer-events-none absolute left-1/2 top-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 sm:h-[30rem] sm:w-[30rem]"
               style={{
                 background: `repeating-conic-gradient(from 0deg, ${rgbaFromHex(
                   team.color,
@@ -393,7 +393,7 @@ function TeamRevealStep({ team, reducedMotion }: { team: RevealTeam; reducedMoti
                 ease: "easeInOut",
                 delay: 0.3,
               }}
-              className="pointer-events-none absolute left-1/2 top-1/2 h-40 w-40 -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl sm:h-56 sm:w-56"
+              className="pointer-events-none absolute left-1/2 top-1/2 h-56 w-56 -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl sm:h-72 sm:w-72"
               style={{ background: rgbaFromHex(team.color, 0.7) }}
             />
           )}
@@ -446,7 +446,7 @@ function TeamRevealStep({ team, reducedMotion }: { team: RevealTeam; reducedMoti
             ? { duration: 0 }
             : { type: "spring", stiffness: 130, damping: 15, mass: 1.1, delay: 0.35 }
         }
-        className="text-balance break-words px-2 text-5xl font-black leading-[1.05] drop-shadow-[0_0_40px_rgba(0,0,0,0.45)] sm:text-7xl md:text-8xl"
+        className="text-balance break-words px-2 text-3xl font-black leading-[1.05] drop-shadow-[0_0_40px_rgba(0,0,0,0.45)] sm:text-4xl md:text-5xl"
         style={{ color: team.color }}
       >
         {team.label}!
@@ -467,7 +467,7 @@ function TeamLogo({ url, color }: { url: string; color: string }) {
   if (failed) return null;
   return (
     <div
-      className="relative h-28 w-28 rounded-2xl border sm:h-36 sm:w-36"
+      className="relative h-44 w-44 rounded-2xl border sm:h-56 sm:w-56"
       style={{
         borderColor: rgbaFromHex(color, 0.5),
         background: rgbaFromHex(color, 0.14),

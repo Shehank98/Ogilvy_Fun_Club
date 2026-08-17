@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { isAdminRequest } from "@/lib/auth";
 import { getOrCreateEvent, loadTeams } from "@/lib/event";
 import { asString, fail, ok, readJson } from "@/lib/api";
+import { normalizeHex } from "@/lib/colors";
 
 export const dynamic = "force-dynamic";
 
@@ -10,15 +11,17 @@ const MAX_NAME_LENGTH = 60;
 const MAX_URL_LENGTH = 2000;
 
 /**
- * Set the display name and/or logo of teams.
+ * Set the display name, logo and/or colour of teams.
  *
  * A team with a name shows it in the draw and on every board; a team left blank
  * falls back to "Team N" (see `teamLabel`), so clearing a name is how an
  * organiser returns to the default numbering. A team's logo (a direct image
  * URL) shows next to its name wherever the team is revealed; clearing it drops
- * back to no logo.
+ * back to no logo. A team's colour tints its reveal background, boards and
+ * roster; it is stored as `#rrggbb`, so an unparseable value is ignored rather
+ * than persisted.
  *
- * Body: `{ names?: { [teamId]: string }, logos?: { [teamId]: string } }`. Only
+ * Body: `{ names?, logos?, colors? }`, each a `{ [teamId]: string }` map. Only
  * teams belonging to the current event are touched; unknown ids are ignored.
  */
 export async function PUT(request: Request) {
@@ -27,8 +30,9 @@ export async function PUT(request: Request) {
   const body = await readJson(request);
   const names = isRecord(body.names) ? body.names : null;
   const logos = isRecord(body.logos) ? body.logos : null;
-  if (!names && !logos) {
-    return fail("Expected a names or logos object.", 400);
+  const colors = isRecord(body.colors) ? body.colors : null;
+  if (!names && !logos && !colors) {
+    return fail("Expected a names, logos or colors object.", 400);
   }
 
   const event = await getOrCreateEvent();
@@ -62,6 +66,16 @@ export async function PUT(request: Request) {
       if (!owned.has(id)) continue;
       const trimmed = asString(raw).trim().slice(0, MAX_URL_LENGTH);
       patchFor(id).logoUrl = trimmed === "" ? null : trimmed;
+    }
+  }
+
+  if (colors) {
+    for (const [id, raw] of Object.entries(colors)) {
+      if (!owned.has(id)) continue;
+      // `color` is non-nullable, so an unparseable value is skipped rather than
+      // clearing the team's existing colour.
+      const normalized = normalizeHex(asString(raw));
+      if (normalized) patchFor(id).color = normalized;
     }
   }
 

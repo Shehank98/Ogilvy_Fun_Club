@@ -43,6 +43,19 @@ export function hexToRgb(hex: string): { r: number; g: number; b: number } | nul
   };
 }
 
+/**
+ * Normalise an admin-entered colour to a canonical `#rrggbb` string, or null if
+ * it isn't a valid hex colour. Accepts `#rgb`/`#rrggbb`, with or without the
+ * leading `#`, in any case; used to validate the team colour picker before it
+ * is stored.
+ */
+export function normalizeHex(hex: string): string | null {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return null;
+  const toHex = (c: number) => c.toString(16).padStart(2, "0");
+  return `#${toHex(rgb.r)}${toHex(rgb.g)}${toHex(rgb.b)}`;
+}
+
 export function rgbaFromHex(hex: string, alpha: number): string {
   const rgb = hexToRgb(hex);
   if (!rgb) return `rgba(255, 255, 255, ${alpha})`;

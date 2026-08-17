@@ -106,19 +106,21 @@ export default function JoinExperience({ event, teamColors, spotsLeft, hasTeams 
       >
         {event.logoUrl ? (
           // The logo is an admin-supplied URL on an arbitrary host, so it is
-          // served as-is rather than through the next/image optimiser.
+          // served as-is rather than through the next/image optimiser. It
+          // carries the event branding, so it leads at a large size while the
+          // title sits under it as a smaller caption.
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={event.logoUrl}
             alt=""
-            className="mb-6 h-24 w-auto max-w-[70vw] object-contain sm:h-32"
+            className="mb-4 h-44 w-auto max-w-[82vw] object-contain sm:h-56"
           />
         ) : (
-          <div className="mb-6 grid h-24 w-24 place-items-center rounded-3xl border border-white/10 bg-white/5 text-4xl">
+          <div className="mb-4 grid h-36 w-36 place-items-center rounded-3xl border border-white/10 bg-white/5 text-6xl sm:h-44 sm:w-44">
             🎳
           </div>
         )}
-        <h1 className="text-balance text-3xl font-black leading-tight sm:text-4xl">
+        <h1 className="text-balance text-lg font-bold leading-tight text-white/80 sm:text-xl">
           {event.title}
         </h1>
         <p className="mt-3 text-balance text-sm text-white/55">

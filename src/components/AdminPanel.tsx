@@ -40,6 +40,9 @@ export default function AdminPanel({
   const [logoDrafts, setLogoDrafts] = useState<Record<string, string>>(() =>
     Object.fromEntries(initialTeams.map((t) => [t.id, t.logoUrl ?? ""]))
   );
+  const [colorDrafts, setColorDrafts] = useState<Record<string, string>>(() =>
+    Object.fromEntries(initialTeams.map((t) => [t.id, t.color]))
+  );
   const [invitees, setInvitees] = useState(initialInvitees);
   const [guestPaste, setGuestPaste] = useState("");
   const [guestErrors, setGuestErrors] = useState<string[]>([]);
@@ -62,6 +65,7 @@ export default function AdminPanel({
     setTeams(next);
     setNameDrafts(Object.fromEntries(next.map((t) => [t.id, t.name ?? ""])));
     setLogoDrafts(Object.fromEntries(next.map((t) => [t.id, t.logoUrl ?? ""])));
+    setColorDrafts(Object.fromEntries(next.map((t) => [t.id, t.color])));
   }
 
   const namesDirty = teams.some(
@@ -70,7 +74,10 @@ export default function AdminPanel({
   const logosDirty = teams.some(
     (t) => (logoDrafts[t.id] ?? "").trim() !== (t.logoUrl ?? "")
   );
-  const teamMetaDirty = namesDirty || logosDirty;
+  const colorsDirty = teams.some(
+    (t) => (colorDrafts[t.id] ?? t.color).toLowerCase() !== t.color.toLowerCase()
+  );
+  const teamMetaDirty = namesDirty || logosDirty || colorsDirty;
 
   // Read the latest values inside the polling interval without re-subscribing.
   const busyRef = useRef(busy);
@@ -120,6 +127,13 @@ export default function AdminPanel({
           }
           return next;
         });
+        setColorDrafts((prev) => {
+          const next: Record<string, string> = {};
+          for (const t of payload.teams as PublicTeam[]) {
+            next[t.id] = t.id in prev ? prev[t.id] : t.color;
+          }
+          return next;
+        });
         // Only refresh the settings form when there's nothing unsaved to lose.
         if (!dirtyRef.current) {
           setEvent(payload.event);
@@ -150,10 +164,13 @@ export default function AdminPanel({
       const logos = Object.fromEntries(
         teams.map((t) => [t.id, logoDrafts[t.id] ?? ""])
       );
+      const colors = Object.fromEntries(
+        teams.map((t) => [t.id, colorDrafts[t.id] ?? t.color])
+      );
       const response = await fetch("/api/admin/teams", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ names, logos }),
+        body: JSON.stringify({ names, logos, colors }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -161,7 +178,7 @@ export default function AdminPanel({
         return;
       }
       applyTeams(payload.teams);
-      announce("ok", "Team names and logos saved.");
+      announce("ok", "Team names, colours and logos saved.");
     } catch {
       announce("error", "Couldn't reach the server.");
     } finally {
@@ -535,14 +552,16 @@ export default function AdminPanel({
           </p>
         </Section>
 
-        <Section title="Team names & logos">
+        <Section title="Team names, colours & logos">
           <p className="mb-4 text-sm text-white/60">
-            Give teams their own name and logo to show in the draw and on the
-            boards. Leave the name blank to keep the default, so that team stays{" "}
-            <span className="font-semibold">Team {`{number}`}</span>. You can mix
-            both: name some, leave others default. The logo is optional; paste a
-            direct image link (PNG works well), e.g. an ImgBB link, or a Google
-            Drive link that opens the image itself, not the share page.
+            Give teams their own name, colour and logo to show in the draw and on
+            the boards. Leave the name blank to keep the default, so that team
+            stays <span className="font-semibold">Team {`{number}`}</span>. You can
+            mix both: name some, leave others default. Pick a colour to match the
+            team&rsquo;s logo — it tints the reveal background, the boards and the
+            roster. The logo is optional; paste a direct image link (PNG works
+            well), e.g. an ImgBB link, or a Google Drive link that opens the image
+            itself, not the share page.
           </p>
 
           {teams.length === 0 ? (
@@ -558,7 +577,7 @@ export default function AdminPanel({
                     <div className="flex items-center gap-3">
                       <LogoPreview
                         url={(logoDrafts[team.id] ?? "").trim()}
-                        color={team.color}
+                        color={colorDrafts[team.id] ?? team.color}
                         fallbackNumber={team.teamNumber}
                       />
                       <div className="min-w-0 flex-1 space-y-2">
@@ -592,6 +611,17 @@ export default function AdminPanel({
                             className={`${fieldClass} text-sm`}
                           />
                         </div>
+                        <div className="flex items-center gap-2">
+                          <span className="w-14 shrink-0 text-xs font-semibold text-white/45">
+                            Colour
+                          </span>
+                          <ColorField
+                            value={colorDrafts[team.id] ?? team.color}
+                            onChange={(color) =>
+                              setColorDrafts((d) => ({ ...d, [team.id]: color }))
+                            }
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -604,7 +634,7 @@ export default function AdminPanel({
                   disabled={busy || !teamMetaDirty}
                   className="rounded-xl bg-sky-500 px-5 py-3 font-bold transition active:scale-95 disabled:bg-slate-700 disabled:text-white/40"
                 >
-                  {busy ? "Saving…" : teamMetaDirty ? "Save names & logos" : "Saved"}
+                  {busy ? "Saving…" : teamMetaDirty ? "Save names, colours & logos" : "Saved"}
                 </button>
                 {teamMetaDirty && (
                   <button
@@ -614,6 +644,9 @@ export default function AdminPanel({
                       );
                       setLogoDrafts(
                         Object.fromEntries(teams.map((t) => [t.id, t.logoUrl ?? ""]))
+                      );
+                      setColorDrafts(
+                        Object.fromEntries(teams.map((t) => [t.id, t.color]))
                       );
                     }}
                     className="text-sm text-white/50 underline-offset-4 hover:underline"
@@ -1001,6 +1034,40 @@ function LogoPreview({
           {fallbackNumber}
         </span>
       )}
+    </div>
+  );
+}
+
+/**
+ * A team colour picker: a native swatch for point-and-click plus a hex field for
+ * pasting an exact brand colour (e.g. sampled from the team's logo). Both edit
+ * the same value; the swatch only understands `#rrggbb`, so the text field is
+ * the escape hatch for shorthand or uppercase input, normalised on save.
+ */
+function ColorField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="flex min-w-0 flex-1 items-center gap-2">
+      <input
+        type="color"
+        value={/^#[0-9a-fA-F]{6}$/.test(value) ? value : "#000000"}
+        onChange={(e) => onChange(e.target.value)}
+        aria-label="Team colour"
+        className="h-9 w-9 shrink-0 cursor-pointer rounded-lg border border-white/15 bg-transparent p-0.5"
+      />
+      <input
+        value={value}
+        placeholder="#rrggbb"
+        maxLength={7}
+        spellCheck={false}
+        onChange={(e) => onChange(e.target.value)}
+        className={`${fieldClass} font-mono text-sm uppercase`}
+      />
     </div>
   );
 }

@@ -240,10 +240,10 @@ function TeamLogo({ url, color }: { url: string; color: string }) {
     <img
       src={url}
       alt=""
-      width={96}
-      height={96}
+      width={144}
+      height={144}
       onError={() => setFailed(true)}
-      className="h-24 w-24 rounded-2xl border object-contain p-2"
+      className="h-36 w-36 rounded-2xl border object-contain p-2 sm:h-40 sm:w-40"
       style={{
         borderColor: rgbaFromHex(color, 0.5),
         background: rgbaFromHex(color, 0.14),
