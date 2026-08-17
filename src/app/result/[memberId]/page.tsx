@@ -24,6 +24,7 @@ export default async function ResultPage({
               isOpen: true,
               maxPerTeam: true,
               revealHeld: true,
+              logoScale: true,
               date: true,
               time: true,
               venue: true,
@@ -48,6 +49,7 @@ export default async function ResultPage({
         eventTitle: team.event.title,
         isOpen: team.event.isOpen,
         maxPerTeam: team.event.maxPerTeam,
+        logoScale: team.event.logoScale,
         held,
         briefing: {
           date: team.event.date,

@@ -3,6 +3,7 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import { rgbaFromHex } from "@/lib/colors";
+import { logoSizeCss } from "@/lib/event";
 
 type RosterMember = { id: string; name: string };
 
@@ -12,6 +13,8 @@ export type ResultData = {
   eventTitle: string;
   isOpen: boolean;
   maxPerTeam: number;
+  /** Admin-set logo display size, as a percentage (100 = default). */
+  logoScale: number;
   /** Owner is finalising teams — show a holding screen, not the live roster. */
   held?: boolean;
   /** Event details, cycled on the holding screen so the wait feels intentional. */
@@ -84,11 +87,11 @@ export default function ResultView({ initial }: { initial: ResultData }) {
           <p className="mt-6 text-lg text-white/70">You&rsquo;re on</p>
           {team.logoUrl && (
             <div className="mt-3 flex justify-center">
-              <TeamLogo url={team.logoUrl} color={team.color} />
+              <TeamLogo url={team.logoUrl} color={team.color} scale={data.logoScale} />
             </div>
           )}
           <h1
-            className="mt-2 text-5xl font-black leading-none sm:text-6xl"
+            className="mt-2 text-3xl font-black leading-tight sm:text-4xl"
             style={{ color: team.color }}
           >
             {team.label}
@@ -232,19 +235,20 @@ function HoldingScreen({
  * transparent or white edges still read on the dark background; a broken or
  * non-direct URL is hidden rather than left as an empty box.
  */
-function TeamLogo({ url, color }: { url: string; color: string }) {
+function TeamLogo({ url, color, scale }: { url: string; color: string; scale: number }) {
   const [failed, setFailed] = useState(false);
   if (failed) return null;
+  const size = logoSizeCss(150, scale, "60vw");
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={url}
       alt=""
-      width={144}
-      height={144}
       onError={() => setFailed(true)}
-      className="h-36 w-36 rounded-2xl border object-contain p-2 sm:h-40 sm:w-40"
+      className="rounded-2xl border object-contain p-2"
       style={{
+        width: size,
+        height: size,
         borderColor: rgbaFromHex(color, 0.5),
         background: rgbaFromHex(color, 0.14),
       }}

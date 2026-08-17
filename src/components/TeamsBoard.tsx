@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { rgbaFromHex } from "@/lib/colors";
-import type { PublicEvent, PublicTeam } from "@/lib/event";
+import { logoSizeCss, type PublicEvent, type PublicTeam } from "@/lib/event";
 import { selectTeam } from "@/lib/assignment";
 
 const POLL_INTERVAL_MS = 5000;
@@ -97,6 +97,7 @@ export default function TeamsBoard({
                 key={team.id}
                 team={team}
                 maxPerTeam={event.maxPerTeam}
+                logoScale={event.logoScale}
                 isNext={team.id === nextTeamId}
               />
             ))}
@@ -119,10 +120,12 @@ export default function TeamsBoard({
 function TeamCard({
   team,
   maxPerTeam,
+  logoScale,
   isNext,
 }: {
   team: PublicTeam;
   maxPerTeam: number;
+  logoScale: number;
   isNext: boolean;
 }) {
   const reducedMotion = useReducedMotion() ?? false;
@@ -145,7 +148,9 @@ function TeamCard({
     >
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">
-          {team.logoUrl && <TeamLogo url={team.logoUrl} color={team.color} />}
+          {team.logoUrl && (
+            <TeamLogo url={team.logoUrl} color={team.color} scale={logoScale} />
+          )}
           <h2 className="truncate text-xl font-black" style={{ color: team.color }}>
             {label}
           </h2>
@@ -223,19 +228,20 @@ function TeamCard({
 }
 
 /** The team's logo, hidden if the URL is broken or not a direct image link. */
-function TeamLogo({ url, color }: { url: string; color: string }) {
+function TeamLogo({ url, color, scale }: { url: string; color: string; scale: number }) {
   const [failed, setFailed] = useState(false);
   if (failed) return null;
+  const size = logoSizeCss(36, scale, "20vw");
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={url}
       alt=""
-      width={36}
-      height={36}
       onError={() => setFailed(true)}
-      className="h-9 w-9 shrink-0 rounded-lg border object-contain p-1"
+      className="shrink-0 rounded-lg border object-contain p-1"
       style={{
+        width: size,
+        height: size,
         borderColor: rgbaFromHex(color, 0.5),
         background: rgbaFromHex(color, 0.14),
       }}

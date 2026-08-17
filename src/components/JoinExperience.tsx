@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import RevealSequence, { type RevealTeam } from "./RevealSequence";
 import Backdrop from "./Backdrop";
-import type { PublicEvent } from "@/lib/event";
+import { logoSizeCss, type PublicEvent } from "@/lib/event";
 import { MAX_EMAIL_LENGTH } from "@/lib/assignment";
 
 type Props = {
@@ -113,7 +113,8 @@ export default function JoinExperience({ event, teamColors, spotsLeft, hasTeams 
           <img
             src={event.logoUrl}
             alt=""
-            className="mb-4 h-44 w-auto max-w-[82vw] object-contain sm:h-56"
+            className="mb-4 w-auto max-w-[82vw] object-contain"
+            style={{ height: logoSizeCss(208, event.logoScale, "32vh") }}
           />
         ) : (
           <div className="mb-4 grid h-36 w-36 place-items-center rounded-3xl border border-white/10 bg-white/5 text-6xl sm:h-44 sm:w-44">

@@ -23,6 +23,7 @@ export async function GET(
               title: true,
               isOpen: true,
               revealHeld: true,
+              logoScale: true,
               date: true,
               time: true,
               venue: true,
@@ -52,6 +53,7 @@ export async function GET(
     eventTitle: team.event.title,
     isOpen: team.event.isOpen,
     maxPerTeam: team.event.maxPerTeam,
+    logoScale: team.event.logoScale,
     held,
     briefing: {
       date: team.event.date,

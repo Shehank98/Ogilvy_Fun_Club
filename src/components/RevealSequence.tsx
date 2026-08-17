@@ -12,7 +12,7 @@ import {
   buildRevealSteps,
   type RevealStep,
 } from "@/lib/reveal-steps";
-import type { PublicEvent } from "@/lib/event";
+import { logoSizeCss, type PublicEvent } from "@/lib/event";
 import { rgbaFromHex } from "@/lib/colors";
 
 export type RevealTeam = {
@@ -166,7 +166,11 @@ export default function RevealSequence({
               />
             )}
             {step?.kind === "reveal" && (
-              <TeamRevealStep team={team} reducedMotion={reducedMotion} />
+              <TeamRevealStep
+                team={team}
+                reducedMotion={reducedMotion}
+                logoScale={event.logoScale}
+              />
             )}
             {step?.kind === "roster" && (
               <RosterStep team={team} reducedMotion={reducedMotion} memberId={memberId} />
@@ -318,7 +322,15 @@ function ShuffleStep({
   );
 }
 
-function TeamRevealStep({ team, reducedMotion }: { team: RevealTeam; reducedMotion: boolean }) {
+function TeamRevealStep({
+  team,
+  reducedMotion,
+  logoScale,
+}: {
+  team: RevealTeam;
+  reducedMotion: boolean;
+  logoScale: number;
+}) {
   useEffect(() => {
     if (reducedMotion) return;
 
@@ -413,7 +425,7 @@ function TeamRevealStep({ team, reducedMotion }: { team: RevealTeam; reducedMoti
             }
             className="relative overflow-hidden rounded-2xl"
           >
-            <TeamLogo url={team.logoUrl} color={team.color} />
+            <TeamLogo url={team.logoUrl} color={team.color} scale={logoScale} />
             {/* Holographic sheen drifting across the logo, over and over. */}
             {!reducedMotion && (
               <motion.div
@@ -461,14 +473,17 @@ function TeamRevealStep({ team, reducedMotion }: { team: RevealTeam; reducedMoti
  * still reads on the dark background. `onError` hides a broken URL so a bad or
  * non-direct link (a Google Drive share page, say) never leaves an empty box.
  */
-function TeamLogo({ url, color }: { url: string; color: string }) {
+function TeamLogo({ url, color, scale }: { url: string; color: string; scale: number }) {
   const [failed, setFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);
   if (failed) return null;
+  const size = logoSizeCss(208, scale, "72vw");
   return (
     <div
-      className="relative h-44 w-44 rounded-2xl border sm:h-56 sm:w-56"
+      className="relative rounded-2xl border"
       style={{
+        width: size,
+        height: size,
         borderColor: rgbaFromHex(color, 0.5),
         background: rgbaFromHex(color, 0.14),
       }}

@@ -3,7 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import type { PublicEvent, PublicTeam } from "@/lib/event";
+import {
+  LOGO_SCALE_MAX,
+  LOGO_SCALE_MIN,
+  type PublicEvent,
+  type PublicTeam,
+} from "@/lib/event";
 import type { PublicInvitee } from "@/lib/invitees";
 import { rgbaFromHex } from "@/lib/colors";
 import { dominantColorFromUrl } from "@/lib/dominant-color";
@@ -237,6 +242,32 @@ export default function AdminPanel({
     } catch {
       announce("error", "Couldn't reach the server.");
       return false;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Persist just the logo size. Kept separate from the main event save so it
+  // doesn't reset any other in-progress edits in the details form (the shared
+  // `save` reseeds the whole draft from the server response).
+  async function saveLogoScale(scale: number) {
+    setBusy(true);
+    try {
+      const response = await fetch("/api/admin/event", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ logoScale: scale }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        announce("error", payload?.error ?? "Could not save the logo size.");
+        return;
+      }
+      setEvent(payload.event);
+      setDraft((d) => ({ ...d, logoScale: payload.event.logoScale }));
+      announce("ok", `Logo size set to ${payload.event.logoScale}%.`);
+    } catch {
+      announce("error", "Couldn't reach the server.");
     } finally {
       setBusy(false);
     }
@@ -745,6 +776,7 @@ export default function AdminPanel({
                   numTeams: draft.numTeams,
                   maxPerTeam: draft.maxPerTeam,
                   logoUrl: draft.logoUrl ?? "",
+                  logoScale: draft.logoScale,
                 })
               }
               disabled={busy || !dirty}
@@ -802,6 +834,60 @@ export default function AdminPanel({
                   className="text-sm text-rose-300 underline-offset-4 hover:underline"
                 >
                   Remove logo
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-6 border-t border-white/10 pt-5">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <span className="text-sm font-medium text-white/70">Logo size</span>
+              <span className="font-mono text-sm text-white/60">
+                {draft.logoScale}%
+              </span>
+            </div>
+            <p className="mb-3 text-xs text-white/40">
+              Scales the club logo above and every team logo in the reveal, on the
+              result page and on the boards. 100% is the default.
+            </p>
+            <input
+              type="range"
+              min={LOGO_SCALE_MIN}
+              max={LOGO_SCALE_MAX}
+              step={5}
+              value={draft.logoScale}
+              onChange={(e) =>
+                setDraft((d) => ({ ...d, logoScale: Number(e.target.value) }))
+              }
+              aria-label="Logo size"
+              className="w-full accent-sky-500"
+            />
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <button
+                onClick={() => saveLogoScale(draft.logoScale)}
+                disabled={busy || draft.logoScale === event.logoScale}
+                className="rounded-xl bg-sky-500 px-5 py-2.5 text-sm font-bold transition active:scale-95 disabled:bg-slate-700 disabled:text-white/40"
+              >
+                {busy
+                  ? "Saving…"
+                  : draft.logoScale === event.logoScale
+                    ? "Saved"
+                    : "Save logo size"}
+              </button>
+              {draft.logoScale !== event.logoScale && (
+                <button
+                  onClick={() => setDraft((d) => ({ ...d, logoScale: event.logoScale }))}
+                  className="text-sm text-white/50 underline-offset-4 hover:underline"
+                >
+                  Discard
+                </button>
+              )}
+              {draft.logoScale !== 100 && (
+                <button
+                  onClick={() => setDraft((d) => ({ ...d, logoScale: 100 }))}
+                  className="text-sm text-white/50 underline-offset-4 hover:underline"
+                >
+                  Reset to 100%
                 </button>
               )}
             </div>

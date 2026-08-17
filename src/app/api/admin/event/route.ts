@@ -10,6 +10,7 @@ import {
 import { loadInvitees } from "@/lib/invitees";
 import { asInt, asString, fail, ok, readJson } from "@/lib/api";
 import { TEAM_COLORS } from "@/lib/colors";
+import { LOGO_SCALE_MAX, LOGO_SCALE_MIN } from "@/lib/event";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +52,14 @@ export async function PUT(request: Request) {
 
   if ("isOpen" in body) {
     data.isOpen = Boolean(body.isOpen);
+  }
+
+  if ("logoScale" in body) {
+    const value = asInt(body.logoScale);
+    if (value === null || value < LOGO_SCALE_MIN || value > LOGO_SCALE_MAX) {
+      return fail(`Logo size must be between ${LOGO_SCALE_MIN} and ${LOGO_SCALE_MAX}.`, 400);
+    }
+    data.logoScale = value;
   }
 
   if ("maxPerTeam" in body) {

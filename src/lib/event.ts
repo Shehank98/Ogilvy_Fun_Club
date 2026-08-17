@@ -129,6 +129,7 @@ export type PublicEvent = {
   venue: string;
   notes: string;
   logoUrl: string | null;
+  logoScale: number;
   numTeams: number;
   maxPerTeam: number;
   isOpen: boolean;
@@ -143,6 +144,7 @@ export function toPublicEvent(event: {
   venue: string;
   notes: string;
   logoUrl: string | null;
+  logoScale: number;
   numTeams: number;
   maxPerTeam: number;
   isOpen: boolean;
@@ -156,6 +158,7 @@ export function toPublicEvent(event: {
     venue: event.venue,
     notes: event.notes,
     logoUrl: event.logoUrl,
+    logoScale: event.logoScale,
     numTeams: event.numTeams,
     maxPerTeam: event.maxPerTeam,
     isOpen: event.isOpen,
@@ -164,4 +167,25 @@ export function toPublicEvent(event: {
 
 export function teamLabel(team: { teamNumber: number; name: string | null }): string {
   return team.name?.trim() ? team.name.trim() : `Team ${team.teamNumber}`;
+}
+
+/** Bounds for the admin-set logo size (a percentage; 100 = default). */
+export const LOGO_SCALE_MIN = 50;
+export const LOGO_SCALE_MAX = 200;
+
+/** Clamp a raw logo-scale value into range, defaulting to 100 if unusable. */
+export function clampLogoScale(value: number | null | undefined): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) return 100;
+  return Math.min(LOGO_SCALE_MAX, Math.max(LOGO_SCALE_MIN, Math.round(value)));
+}
+
+/**
+ * A logo's rendered size in CSS, scaling a base pixel size by the event's logo
+ * scale (a percentage) and capping it to a share of the viewport so a large
+ * scale can't overflow a phone screen. Returned as a `min(...)` string for use
+ * as a width/height style value.
+ */
+export function logoSizeCss(basePx: number, scale: number, viewportCap: string): string {
+  const factor = clampLogoScale(scale) / 100;
+  return `min(${Math.round(basePx * factor)}px, ${viewportCap})`;
 }

@@ -16,6 +16,9 @@ model Event {
   venue         String   @default("")
   notes         String   @default("")
   logoUrl       String?
+  /// Display size of logos, as a percentage (100 = default). Scales the club
+  /// logo on the join page and the team logos in the reveal, result and boards.
+  logoScale     Int      @default(100)
   numTeams      Int      @default(4)
   maxPerTeam    Int      @default(5)
   isOpen        Boolean  @default(true)
